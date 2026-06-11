@@ -11,7 +11,8 @@
 
 set -eu
 
-SRC_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+unset CDPATH
+SRC_DIR=$(cd -- "$(dirname -- "$0")" && pwd)
 VERSION=$(awk '/^Version: / { print $2; exit }' "$SRC_DIR/skill/SKILL.md")
 TARGET="${1:-all}"
 
