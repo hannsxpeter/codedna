@@ -4,9 +4,9 @@
 
 [![Release](https://img.shields.io/github/v/release/aihxp/codedna?sort=semver)](https://github.com/aihxp/codedna/releases)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Claude Code skill](https://img.shields.io/badge/Claude%20Code-skill-8A2BE2)](https://claude.com/claude-code)
+[![Agent skill](https://img.shields.io/badge/coding%20agents-skill-8A2BE2)](https://agents.md)
 
-codedna is a single-file [Claude Code](https://claude.com/claude-code) skill. It studies a codebase the way you would study a writer's voice, writes the conventions down in a profile, and uses that profile so future contributions read as if the original author wrote them.
+codedna is a portable coding-agent skill. It studies a codebase the way you would study a writer's voice, writes the conventions down in a profile, and uses that profile so future contributions read as if the original author wrote them.
 
 ## The problem
 
@@ -24,11 +24,11 @@ Three modes, one profile:
 | **Match** | Write new code that follows the profile so it blends in. | "add this in the style of the repo" |
 | **Check** | Review a diff or file against the profile and report the tells. | "does this look AI-generated?" |
 
-Map also wires an idempotent pointer into the target repo's `CLAUDE.md`, so the profile loads automatically every session and actually gets used.
+Map also wires idempotent pointers into agent instruction files, so the profile loads automatically in the tools your repo uses and actually gets used.
 
 ## Install
 
-codedna is a file-only skill, just `codedna.md`. Drop it into your Claude Code skills directory:
+codedna installs as a standard `SKILL.md` directory for supported skill-capable agents:
 
 ```sh
 git clone https://github.com/aihxp/codedna.git
@@ -36,13 +36,30 @@ cd codedna
 ./install.sh
 ```
 
-Or install it by hand:
+By default, `./install.sh` installs codedna for Claude Code, Codex, and Windsurf/Cascade. Install a single target with `./install.sh claude`, `./install.sh codex`, or `./install.sh windsurf`.
+
+Or install it by hand for any `SKILL.md` host:
 
 ```sh
-cp codedna.md ~/.claude/skills/codedna.md
+mkdir -p <skills-dir>/codedna/scripts
+cp skill/SKILL.md <skills-dir>/codedna/SKILL.md
+cp skill/scripts/codedna_stats.py <skills-dir>/codedna/scripts/codedna_stats.py
 ```
 
-Then start a Claude Code session and the skill is available. It triggers on phrases like "match my coding style", "capture the conventions", "make it look like I wrote it", or an explicit "codedna".
+Then restart the target coding agent. It triggers on phrases like "match my coding style", "capture the conventions", "make it look like I wrote it", or an explicit "codedna".
+
+## Agent support
+
+| Agent | How codedna integrates |
+| --- | --- |
+| Claude Code | Global skill install plus `CLAUDE.md` project wiring. |
+| Codex | Global skill install plus `AGENTS.md` project wiring. |
+| Gemini CLI | `GEMINI.md` project wiring. |
+| GitHub Copilot | `.github/copilot-instructions.md` project wiring. |
+| Cursor | `AGENTS.md` or `.cursor/rules/codedna.mdc` project wiring. |
+| Windsurf/Cascade | Global skill install plus `AGENTS.md`, `.devin/rules/`, or `.windsurf/rules/` project wiring. |
+
+See [docs/AGENT_SUPPORT.md](docs/AGENT_SUPPORT.md) for install paths, overrides, and release package install.
 
 ## Usage
 
@@ -52,7 +69,7 @@ Map a repository:
 > build the codedna for this repo
 ```
 
-codedna reads the linter and formatter configs as ground truth, runs a small bundled stats pass for grounded frequencies (naming casing, comment density, indentation, quotes), close-reads a representative sample for voice, then writes `CODEDNA.md` and points `CLAUDE.md` at it.
+codedna reads the linter and formatter configs as ground truth, runs a bundled stdlib-only stats pass for grounded frequencies (naming casing, comment density, indentation, quotes), close-reads a representative sample for voice, then writes `CODEDNA.md` and points the repo's agent instruction files at it.
 
 Write code that blends in:
 
@@ -64,6 +81,17 @@ Check code for tells before you commit:
 
 ```
 > check this diff against the codedna
+```
+
+Optional pre-commit hook:
+
+```sh
+cat > .git/hooks/pre-commit <<'HOOK'
+#!/usr/bin/env sh
+# Replace agent-cli with your preferred coding agent command.
+agent-cli "check the staged diff against the codedna"
+HOOK
+chmod +x .git/hooks/pre-commit
 ```
 
 ## What it captures
@@ -95,10 +123,10 @@ Every line is concrete enough that it would read differently for a different cod
 codedna analyzes in layers, cheapest and most authoritative first:
 
 1. **Config files** (`.editorconfig`, Prettier, ESLint, `pyproject.toml`, `rustfmt.toml`, and friends) are enforced, so they settle whole categories up front and are recorded as such.
-2. **A bundled stdlib-only stats helper** grounds the profile in real frequencies instead of guesswork.
+2. **A bundled stdlib-only stats helper** at `skill/scripts/codedna_stats.py` grounds the profile in real frequencies instead of guesswork.
 3. **Close reading** of a representative sample captures the voice that numbers cannot.
 
-Because it is a file-only skill, everything (the procedure, the analysis dimensions, the AI-tells catalog, the output template, and the stats helper) lives in one self-contained `codedna.md`.
+The skill entrypoint lives at `skill/SKILL.md`, with executable helpers kept as files beside it so they can be run and tested directly. Agents without a global skill mechanism still benefit from the generated `CODEDNA.md` and repo-level instruction files.
 
 ## Contributing
 

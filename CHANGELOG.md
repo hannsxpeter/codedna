@@ -2,6 +2,30 @@
 
 All notable changes to codedna are documented in this file. The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.1] - 2026-06-11
+
+### Fixed
+
+- Install codedna as a standard `SKILL.md` directory for Claude Code, Codex, and Windsurf/Cascade instead of a bare markdown file that skill hosts do not load.
+- Remove stale bare-file installs from skill directories where applicable.
+
+### Changed
+
+- Move the skill entrypoint to `skill/SKILL.md`.
+- Extract the stats helper to `skill/scripts/codedna_stats.py` so it is executed as a bundled script instead of transcribed from markdown.
+- Stamp generated profile templates with the codedna version and generation date.
+- Weight author-scoped file sampling by touch frequency instead of treating every touched file equally.
+- Default Check mode to the current diff when no review target is specified, and warn when a profile looks stale.
+- Replace Claude-only Map wiring with portable project wiring for `AGENTS.md`, `CLAUDE.md`, `GEMINI.md`, GitHub Copilot instructions, Cursor rules, and Windsurf/Cascade rules.
+
+### Added
+
+- Add unit tests and GitHub Actions CI for the stats helper and installer.
+- Add a local markdown-link test and a README pre-commit hook recipe.
+- Add helper safeguards for capped samples, oversized files, context-managed reads, JS arrow-function detection, and language-aware quote reporting.
+- Add multi-target installer support for `all`, `claude`, `codex`, and `windsurf`.
+- Add an agent support matrix in `docs/AGENT_SUPPORT.md`.
+
 ## [1.0.0] - 2026-06-06
 
 Initial release.
@@ -17,4 +41,5 @@ Initial release.
 - **Profile template**: a fixed `CODEDNA.md` structure that enforces specificity and pairs every convention with a real snippet.
 - Packaged as a single self-contained file, `codedna.md`, plus an `install.sh` for one-command installation.
 
+[1.0.1]: https://github.com/aihxp/codedna/releases/tag/v1.0.1
 [1.0.0]: https://github.com/aihxp/codedna/releases/tag/v1.0.0

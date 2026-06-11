@@ -4,7 +4,9 @@ Thanks for your interest in improving codedna. It is a small project with a clea
 
 ## What codedna is
 
-codedna is a file-only Claude Code skill. The entire skill lives in [`codedna.md`](codedna.md): the frontmatter, the three modes (Map, Match, Check), the analysis dimensions, the AI-tells catalog, the output template, and an inlined stats helper. There is no build step and no dependency to install. Edits to the skill are edits to that one file.
+codedna is a portable coding-agent skill installed as a directory for hosts that support `SKILL.md`. The entrypoint lives in [`skill/SKILL.md`](skill/SKILL.md), and executable helpers live beside it under [`skill/scripts/`](skill/scripts/). There is no build step and no runtime dependency to install.
+
+Agent-specific install paths and project wiring are documented in [docs/AGENT_SUPPORT.md](docs/AGENT_SUPPORT.md). Keep target-specific details there rather than scattering them through the skill text.
 
 ## Ways to help
 
@@ -15,23 +17,34 @@ codedna is a file-only Claude Code skill. The entire skill lives in [`codedna.md
 
 ## Testing a change
 
-The skill has no automated test suite; you validate it by running it.
-
-1. Install your working copy: `./install.sh` (or `cp codedna.md ~/.claude/skills/codedna.md`).
-2. In a Claude Code session, point it at a real repository: "build the codedna for this repo."
-3. Read the generated `CODEDNA.md`. Ask whether each line is specific enough that it would read differently for a different codebase. Generic lines are the most common regression.
-
-To sanity-check the inlined stats helper on its own, copy the `python` block out of `codedna.md` to a file and run it:
+Run the automated checks before opening a pull request:
 
 ```sh
-python3 codedna_stats.py /path/to/some/repo
+python3 -m py_compile skill/scripts/codedna_stats.py
+python3 -m unittest discover -s tests
+tmp="$(mktemp -d)"
+CLAUDE_SKILLS_DIR="$tmp/claude" CODEX_SKILLS_DIR="$tmp/codex" WINDSURF_SKILLS_DIR="$tmp/windsurf" ./install.sh
 ```
 
-It should report a language inventory with naming-casing histograms, comment density, indentation, and quote style, and it should never crash on a file it cannot parse.
+If `shellcheck` is installed, run `shellcheck install.sh` as well.
+
+Then validate the skill behavior manually:
+
+1. Install your working copy with `./install.sh` or one target such as `./install.sh codex`.
+2. In a supported coding-agent session, point it at a real repository: "build the codedna for this repo."
+3. Read the generated `CODEDNA.md`. Ask whether each line is specific enough that it would read differently for a different codebase. Generic lines are the most common regression.
+
+To sanity-check the stats helper on its own, run:
+
+```sh
+python3 skill/scripts/codedna_stats.py /path/to/some/repo
+```
+
+It should report a language inventory with naming-casing histograms, comment density, indentation, and quote style, and it should disclose capped samples, skipped oversized files, and unreadable files.
 
 ## Pull requests
 
-- Keep the skill a single self-contained file. Resist splitting it into multiple files; the file-only shape is intentional.
+- Keep prompt guidance in `skill/SKILL.md` and executable helper logic under `skill/scripts/`.
 - Keep conventions concrete. The skill's whole thesis is specificity, so changes to its guidance should model that.
 - Describe what you changed and, ideally, the before-and-after on a real repo.
 
