@@ -7,13 +7,14 @@ codedna has two integration layers:
 
 ## Skill installs
 
-`./install.sh` installs the same canonical skill bundle from `skill/` into each supported skill directory.
+`./install.sh <target>` installs the same canonical skill bundle from `skill/` into the selected supported skill directory.
 
 | Target | Command | Default destination |
 | --- | --- | --- |
-| All supported skill hosts | `./install.sh` | Claude Code, Codex, and Windsurf/Cascade |
+| All supported skill hosts | `./install.sh all` | Claude Code, Codex, Cursor, and Windsurf/Cascade |
 | Claude Code | `./install.sh claude` | `~/.claude/skills/codedna/` |
 | Codex | `./install.sh codex` | `~/.codex/skills/codedna/` |
+| Cursor | `./install.sh cursor` | `~/.cursor/skills/codedna/` |
 | Windsurf/Cascade | `./install.sh windsurf` | `~/.codeium/windsurf/skills/codedna/` |
 
 Destination overrides:
@@ -21,12 +22,14 @@ Destination overrides:
 ```sh
 CLAUDE_SKILLS_DIR=/path/to/skills ./install.sh claude
 CODEX_SKILLS_DIR=/path/to/skills ./install.sh codex
+CURSOR_SKILLS_DIR=/path/to/skills ./install.sh cursor
 WINDSURF_SKILLS_DIR=/path/to/skills ./install.sh windsurf
 ```
 
 ## Project wiring
 
 Map mode writes `CODEDNA.md`, then points the repo's agent instruction files at it with idempotent codedna markers.
+The bundled `skill/scripts/codedna_wire.py` helper performs this update and preserves unrelated file content.
 
 | Agent | Instruction file |
 | --- | --- |
@@ -44,7 +47,7 @@ If a repo already uses one of these files, codedna updates only the block betwee
 Release tarballs contain the skill bundle, installer, docs, tests, and license:
 
 ```sh
-curl -L https://github.com/aihxp/codedna/releases/download/v1.0.1/codedna-v1.0.1.tar.gz | tar xz
-cd codedna-1.0.1
-./install.sh
+curl -L https://github.com/hannsxpeter/codedna/releases/download/v1.0.2/codedna-v1.0.2.tar.gz | tar xz
+cd codedna-1.0.2
+./install.sh codex
 ```

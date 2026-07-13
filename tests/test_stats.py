@@ -66,6 +66,20 @@ class StatsTests(unittest.TestCase):
 
         self.assertEqual(payload[0]["language"], "py")
         self.assertIn("function", payload[0]["naming"])
+        self.assertIn("function_lengths", payload[0])
+        self.assertGreater(payload[0]["function_lengths"]["median"], 0)
+        self.assertIn("identifier_lengths", payload[0])
+        self.assertEqual(payload[0]["doc_comment_coverage"]["functions"], 3)
+        self.assertEqual(payload[0]["doc_comment_coverage"]["documented"], 1)
+
+    def test_reports_deeper_style_metrics(self):
+        results = {item["language"]: item for item in self.stats.analyze(ROOT / "tests" / "fixtures" / "terse_js")}
+        js = results["js"]
+
+        self.assertEqual(js["function_lengths"]["count"], 4)
+        self.assertGreaterEqual(js["function_lengths"]["p90"], js["function_lengths"]["median"])
+        self.assertGreater(js["identifier_lengths"]["function"]["median"], 0)
+        self.assertGreater(js["boolean_prefix_share"]["prefixed"], 0)
 
 
 if __name__ == "__main__":

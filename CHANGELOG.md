@@ -2,6 +2,20 @@
 
 All notable changes to codedna are documented in this file. The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.2] - 2026-07-13
+
+### Changed
+
+- Make `install.sh` require an explicit target (`all`, `claude`, `codex`, `cursor`, or `windsurf`) instead of installing into every supported agent home by default.
+- Update docs and release package examples for the canonical `hannsxpeter/codedna` repository.
+- Update generated profile templates to identify codedna v1.0.2.
+
+### Added
+
+- Add `skill/scripts/codedna_wire.py`, a tested helper for idempotently wiring `CODEDNA.md` into `AGENTS.md`, `CLAUDE.md`, `GEMINI.md`, GitHub Copilot instructions, Cursor rules, and Windsurf/Cascade rules.
+- Add deeper stats helper metrics for function-size distribution, identifier-length distribution, boolean-prefix share, TODO/FIXME density, and doc-comment coverage.
+- Add tests for wiring behavior, safer installer defaults, and the new metrics.
+
 ## [1.0.1] - 2026-06-11
 
 ### Fixed
@@ -41,5 +55,6 @@ Initial release.
 - **Profile template**: a fixed `CODEDNA.md` structure that enforces specificity and pairs every convention with a real snippet.
 - Packaged as a single self-contained file, `codedna.md`, plus an `install.sh` for one-command installation.
 
-[1.0.1]: https://github.com/aihxp/codedna/releases/tag/v1.0.1
-[1.0.0]: https://github.com/aihxp/codedna/releases/tag/v1.0.0
+[1.0.2]: https://github.com/hannsxpeter/codedna/releases/tag/v1.0.2
+[1.0.1]: https://github.com/hannsxpeter/codedna/releases/tag/v1.0.1
+[1.0.0]: https://github.com/hannsxpeter/codedna/releases/tag/v1.0.0

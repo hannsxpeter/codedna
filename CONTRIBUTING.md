@@ -21,16 +21,17 @@ Run the automated checks before opening a pull request:
 
 ```sh
 python3 -m py_compile skill/scripts/codedna_stats.py
+python3 -m py_compile skill/scripts/codedna_wire.py
 python3 -m unittest discover -s tests
 tmp="$(mktemp -d)"
-CLAUDE_SKILLS_DIR="$tmp/claude" CODEX_SKILLS_DIR="$tmp/codex" WINDSURF_SKILLS_DIR="$tmp/windsurf" ./install.sh
+CLAUDE_SKILLS_DIR="$tmp/claude" CODEX_SKILLS_DIR="$tmp/codex" CURSOR_SKILLS_DIR="$tmp/cursor" WINDSURF_SKILLS_DIR="$tmp/windsurf" ./install.sh all
 ```
 
 If `shellcheck` is installed, run `shellcheck install.sh` as well.
 
 Then validate the skill behavior manually:
 
-1. Install your working copy with `./install.sh` or one target such as `./install.sh codex`.
+1. Install your working copy with one target such as `./install.sh codex`, or use `./install.sh all` when you intentionally want every supported skill host.
 2. In a supported coding-agent session, point it at a real repository: "build the codedna for this repo."
 3. Read the generated `CODEDNA.md`. Ask whether each line is specific enough that it would read differently for a different codebase. Generic lines are the most common regression.
 
@@ -38,6 +39,7 @@ To sanity-check the stats helper on its own, run:
 
 ```sh
 python3 skill/scripts/codedna_stats.py /path/to/some/repo
+python3 skill/scripts/codedna_wire.py /path/to/some/repo
 ```
 
 It should report a language inventory with naming-casing histograms, comment density, indentation, and quote style, and it should disclose capped samples, skipped oversized files, and unreadable files.
