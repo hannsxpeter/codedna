@@ -18,7 +18,9 @@ jobs:
           python-version: "3.x"
 
       - name: Compile stats helper
-        run: python -m py_compile skill/scripts/codedna_stats.py
+        run: |
+          python -m py_compile skill/scripts/codedna_stats.py
+          python -m py_compile skill/scripts/codedna_wire.py
 
       - name: Run tests
         run: python -m unittest discover -s tests

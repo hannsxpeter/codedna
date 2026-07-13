@@ -2,6 +2,7 @@ const total = (price + tax) * qty;
 const label = "user";
 const state = 'ready';
 const msg = `hi ${label}`;
+const isReady = true;
 
 const inc = n => n + 1;
 const loadUser = async (id) => db.user(id);

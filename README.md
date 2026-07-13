@@ -2,7 +2,7 @@
 
 > Fingerprint a codebase's style so AI-written code is indistinguishable from the author's own.
 
-[![Release](https://img.shields.io/github/v/release/aihxp/codedna?sort=semver)](https://github.com/aihxp/codedna/releases)
+[![Release](https://img.shields.io/github/v/release/hannsxpeter/codedna?sort=semver)](https://github.com/hannsxpeter/codedna/releases)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Agent skill](https://img.shields.io/badge/coding%20agents-skill-8A2BE2)](https://agents.md)
 
@@ -31,12 +31,12 @@ Map also wires idempotent pointers into agent instruction files, so the profile 
 codedna installs as a standard `SKILL.md` directory for supported skill-capable agents:
 
 ```sh
-git clone https://github.com/aihxp/codedna.git
+git clone https://github.com/hannsxpeter/codedna.git
 cd codedna
-./install.sh
+./install.sh codex
 ```
 
-By default, `./install.sh` installs codedna for Claude Code, Codex, and Windsurf/Cascade. Install a single target with `./install.sh claude`, `./install.sh codex`, or `./install.sh windsurf`.
+Choose the target you use: `./install.sh claude`, `./install.sh codex`, `./install.sh cursor`, or `./install.sh windsurf`. To install into every supported skill host deliberately, run `./install.sh all`.
 
 Or install it by hand for any `SKILL.md` host:
 
@@ -44,6 +44,8 @@ Or install it by hand for any `SKILL.md` host:
 mkdir -p <skills-dir>/codedna/scripts
 cp skill/SKILL.md <skills-dir>/codedna/SKILL.md
 cp skill/scripts/codedna_stats.py <skills-dir>/codedna/scripts/codedna_stats.py
+cp skill/scripts/codedna_wire.py <skills-dir>/codedna/scripts/codedna_wire.py
+chmod +x <skills-dir>/codedna/scripts/codedna_*.py
 ```
 
 Then restart the target coding agent. It triggers on phrases like "match my coding style", "capture the conventions", "make it look like I wrote it", or an explicit "codedna".
@@ -56,7 +58,7 @@ Then restart the target coding agent. It triggers on phrases like "match my codi
 | Codex | Global skill install plus `AGENTS.md` project wiring. |
 | Gemini CLI | `GEMINI.md` project wiring. |
 | GitHub Copilot | `.github/copilot-instructions.md` project wiring. |
-| Cursor | `AGENTS.md` or `.cursor/rules/codedna.mdc` project wiring. |
+| Cursor | Global skill install plus `AGENTS.md` or `.cursor/rules/codedna.mdc` project wiring. |
 | Windsurf/Cascade | Global skill install plus `AGENTS.md`, `.devin/rules/`, or `.windsurf/rules/` project wiring. |
 
 See [docs/AGENT_SUPPORT.md](docs/AGENT_SUPPORT.md) for install paths, overrides, and release package install.
@@ -123,7 +125,7 @@ Every line is concrete enough that it would read differently for a different cod
 codedna analyzes in layers, cheapest and most authoritative first:
 
 1. **Config files** (`.editorconfig`, Prettier, ESLint, `pyproject.toml`, `rustfmt.toml`, and friends) are enforced, so they settle whole categories up front and are recorded as such.
-2. **A bundled stdlib-only stats helper** at `skill/scripts/codedna_stats.py` grounds the profile in real frequencies instead of guesswork.
+2. **Bundled stdlib-only helpers** ground the profile in real frequencies and wire `CODEDNA.md` into agent instruction files.
 3. **Close reading** of a representative sample captures the voice that numbers cannot.
 
 The skill entrypoint lives at `skill/SKILL.md`, with executable helpers kept as files beside it so they can be run and tested directly. Agents without a global skill mechanism still benefit from the generated `CODEDNA.md` and repo-level instruction files.

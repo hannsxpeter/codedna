@@ -6,6 +6,7 @@ import json
 import os
 import re
 from collections import Counter, defaultdict
+from statistics import median
 
 MAX_FILES_PER_LANG = 800
 MAX_FILE_BYTES = 1_000_000
@@ -48,6 +49,8 @@ EXT = {
 
 HASH_COMMENT = {"py", "rb"}
 QUOTE_LANGS = {"js", "ts", "py", "rb", "php"}
+BOOLEAN_PREFIXES = ("is", "has", "should", "can", "will", "did")
+TODO_RE = re.compile(r"\b(?:TODO|FIXME)\b")
 
 PATS = {
     "js": {
@@ -56,12 +59,14 @@ PATS = {
             r"\b(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=\s*(?:async\s*)?function\b",
             r"\b(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=\s*(?:async\s*)?(?:\([^)]*\)|[A-Za-z_$][\w$]*)\s*=>",
         ],
+        "variable": [r"\b(?:const|let|var)\s+([A-Za-z_$][\w$]*)\b"],
         "type": [r"\b(?:interface|type)\s+([A-Za-z_$][\w$]*)"],
         "class": [r"\bclass\s+([A-Za-z_$][\w$]*)"],
         "constant": [r"\bconst\s+([A-Z_][A-Z0-9_]{2,})\b"],
     },
     "py": {
         "function": [r"^\s*(?:async\s+)?def\s+([A-Za-z_]\w*)"],
+        "variable": [r"^\s*([A-Za-z_]\w*)\s*="],
         "class": [r"^\s*class\s+([A-Za-z_]\w*)"],
         "constant": [r"^([A-Z_][A-Z0-9_]{2,})\s*="],
     },
@@ -169,17 +174,134 @@ def count_quotes(lang, text):
     return counts
 
 
+def percentile(values, pct):
+    if not values:
+        return 0
+    ordered = sorted(values)
+    index = round((pct / 100) * (len(ordered) - 1))
+    return ordered[index]
+
+
+def summarize(values):
+    if not values:
+        return {"count": 0, "median": 0, "p90": 0}
+    return {
+        "count": len(values),
+        "median": median(values),
+        "p90": percentile(values, 90),
+    }
+
+
 def add_file_case(naming, path):
     base = os.path.splitext(os.path.basename(path))[0]
     if base:
         naming["file"][case(base)] += 1
 
 
-def add_identifier_cases(lang, text, naming):
+def add_identifier_cases(lang, text, naming, lengths, boolean_names):
     for kind, patterns in PATS.get(lang, {}).items():
         for pattern in patterns:
             for match in re.finditer(pattern, text, re.M):
-                naming[kind][case(match.group(1))] += 1
+                name = match.group(1)
+                naming[kind][case(name)] += 1
+                lengths[kind].append(len(name.strip("_")))
+                if name and name[0].islower():
+                    boolean_names.append(name)
+
+
+def leading_spaces(line):
+    return len(line) - len(line.lstrip(" "))
+
+
+def py_function_lengths(text):
+    lengths = []
+    lines = text.splitlines()
+    for index, line in enumerate(lines):
+        if not re.match(r"^\s*(?:async\s+)?def\s+[A-Za-z_]\w*", line):
+            continue
+        indent = leading_spaces(line)
+        end = index + 1
+        for cursor in range(index + 1, len(lines)):
+            stripped = lines[cursor].strip()
+            if not stripped:
+                continue
+            if leading_spaces(lines[cursor]) <= indent and not stripped.startswith("#"):
+                break
+            end = cursor + 1
+        lengths.append(max(1, end - index))
+    return lengths
+
+
+def brace_function_lengths(text):
+    starts = re.compile(
+        r"\bfunction\s+[A-Za-z_$][\w$]*\s*\(|"
+        r"\b(?:const|let|var)\s+[A-Za-z_$][\w$]*\s*=\s*(?:async\s*)?(?:function\b|\([^)]*\)\s*=>|[A-Za-z_$][\w$]*\s*=>)|"
+        r"\bfunc\s+(?:\([^)]*\)\s*)?[A-Za-z_]\w*|"
+        r"\bfn\s+[A-Za-z_]\w*"
+    )
+    lengths = []
+    lines = text.splitlines()
+    for index, line in enumerate(lines):
+        if not starts.search(line):
+            continue
+        if "=>" in line and "{" not in line:
+            lengths.append(1)
+            continue
+        balance = 0
+        saw_brace = False
+        end = index
+        for cursor in range(index, len(lines)):
+            balance += lines[cursor].count("{")
+            balance -= lines[cursor].count("}")
+            saw_brace = saw_brace or "{" in lines[cursor]
+            end = cursor
+            if saw_brace and balance <= 0:
+                break
+        lengths.append(max(1, end - index + 1))
+    return lengths
+
+
+def function_lengths(lang, text):
+    if lang == "py":
+        return py_function_lengths(text)
+    if lang in {"js", "ts", "go", "rs"}:
+        return brace_function_lengths(text)
+    return []
+
+
+def doc_coverage(lang, text):
+    lines = text.splitlines()
+    total = 0
+    documented = 0
+    for index, line in enumerate(lines):
+        if lang == "py":
+            match = re.match(r"^\s*(?:async\s+)?def\s+[A-Za-z_]\w*", line)
+        else:
+            match = re.search(
+                r"\bfunction\s+[A-Za-z_$][\w$]*\s*\(|"
+                r"\b(?:const|let|var)\s+[A-Za-z_$][\w$]*\s*=\s*(?:async\s*)?(?:function\b|\([^)]*\)\s*=>|[A-Za-z_$][\w$]*\s*=>)|"
+                r"\bfunc\s+(?:\([^)]*\)\s*)?[A-Za-z_]\w*|"
+                r"\bfn\s+[A-Za-z_]\w*",
+                line,
+            )
+        if not match:
+            continue
+        total += 1
+        if lang == "py":
+            for cursor in range(index + 1, len(lines)):
+                stripped = lines[cursor].strip()
+                if not stripped:
+                    continue
+                if stripped.startswith(('"""', "'''")):
+                    documented += 1
+                break
+        else:
+            cursor = index - 1
+            while cursor >= 0 and not lines[cursor].strip():
+                cursor -= 1
+            if cursor >= 0 and lines[cursor].strip().startswith(("/**", "///", "//")):
+                documented += 1
+    return documented, total
 
 
 def analyze_language(lang, paths):
@@ -194,9 +316,19 @@ def analyze_language(lang, paths):
         "indent": {"tabs": 0, "spaces": 0, "style": "spaces"},
         "quotes": {},
         "naming": {},
+        "identifier_lengths": {},
+        "function_lengths": {"count": 0, "median": 0, "p90": 0},
+        "boolean_prefix_share": {"count": 0, "prefixed": 0, "percent": 0},
+        "todo_markers": 0,
+        "doc_comment_coverage": {"functions": 0, "documented": 0, "percent": 0},
     }
     naming = defaultdict(Counter)
+    lengths = defaultdict(list)
     quotes = Counter()
+    fn_lengths = []
+    boolean_names = []
+    documented_functions = 0
+    total_functions = 0
 
     for path in paths[:MAX_FILES_PER_LANG]:
         try:
@@ -216,7 +348,12 @@ def analyze_language(lang, paths):
         result["indent"]["spaces"] += spaces
         quotes.update(count_quotes(lang, text))
         add_file_case(naming, path)
-        add_identifier_cases(lang, text, naming)
+        add_identifier_cases(lang, text, naming, lengths, boolean_names)
+        fn_lengths.extend(function_lengths(lang, text))
+        documented, total = doc_coverage(lang, text)
+        documented_functions += documented
+        total_functions += total
+        result["todo_markers"] += len(TODO_RE.findall(text))
 
     result["files_capped"] = max(len(paths) - MAX_FILES_PER_LANG, 0)
     total_lines = result["code_lines"] + result["comment_lines"]
@@ -224,6 +361,19 @@ def analyze_language(lang, paths):
     result["indent"]["style"] = "tabs" if result["indent"]["tabs"] > result["indent"]["spaces"] else "spaces"
     result["quotes"] = dict(quotes)
     result["naming"] = {kind: dict(counter) for kind, counter in naming.items()}
+    result["identifier_lengths"] = {kind: summarize(values) for kind, values in lengths.items()}
+    result["function_lengths"] = summarize(fn_lengths)
+    prefixed = sum(1 for name in boolean_names if name.startswith(BOOLEAN_PREFIXES))
+    result["boolean_prefix_share"] = {
+        "count": len(boolean_names),
+        "prefixed": prefixed,
+        "percent": round(100 * prefixed / len(boolean_names), 1) if boolean_names else 0,
+    }
+    result["doc_comment_coverage"] = {
+        "functions": total_functions,
+        "documented": documented_functions,
+        "percent": round(100 * documented_functions / total_functions, 1) if total_functions else 0,
+    }
     return result
 
 
@@ -274,6 +424,19 @@ def print_text(results, target):
         if quotes:
             parts = ["%s %d%%" % (name, pct(quotes, name)) for name in ["double", "single", "backtick"] if quotes.get(name)]
             print("  quotes   : " + " / ".join(parts))
+        if result["function_lengths"]["count"]:
+            print(
+                "  fn size  : median %s lines / p90 %s (%d functions)"
+                % (
+                    result["function_lengths"]["median"],
+                    result["function_lengths"]["p90"],
+                    result["function_lengths"]["count"],
+                )
+            )
+        if result["doc_comment_coverage"]["functions"]:
+            print("  doc cov  : %s%% of functions" % result["doc_comment_coverage"]["percent"])
+        if result["todo_markers"]:
+            print("  markers  : TODO/FIXME %d" % result["todo_markers"])
 
         for kind, counts in result["naming"].items():
             counter = Counter(counts)
@@ -285,6 +448,11 @@ def print_text(results, target):
                 for name, count in counter.most_common(3)
             )
             print("  %-9s: %s" % (kind, top))
+        for kind, length in result["identifier_lengths"].items():
+            if length["count"]:
+                print("  %-9s: median len %s / p90 %s" % (kind + " len", length["median"], length["p90"]))
+        if result["boolean_prefix_share"]["count"]:
+            print("  bool pref: %s%% of lowercase identifiers" % result["boolean_prefix_share"]["percent"])
         if any("lower" in counts for counts in result["naming"].values()):
             print("  note     : lower means single-word names compatible with snake_case or camelCase")
 
