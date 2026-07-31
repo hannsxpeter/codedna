@@ -10,6 +10,7 @@ from statistics import median
 
 MAX_FILES_PER_LANG = 800
 MAX_FILE_BYTES = 1_000_000
+MAX_BYTES_PER_LINE = 400
 
 IGNORE = {
     ".git",
@@ -49,8 +50,14 @@ EXT = {
 
 HASH_COMMENT = {"py", "rb"}
 QUOTE_LANGS = {"js", "ts", "py", "rb", "php"}
-BOOLEAN_PREFIXES = ("is", "has", "should", "can", "will", "did")
+BOOLEAN_PREFIX_RE = re.compile(r"^(?:is|has|should|can|will|did)(?:[A-Z_]|$)")
 TODO_RE = re.compile(r"\b(?:TODO|FIXME)\b")
+
+DOC_MARKERS = {
+    "default": ("/**", "///"),
+    "go": ("//",),
+    "rs": ("///", "//!", "/**"),
+}
 
 PATS = {
     "js": {
@@ -113,7 +120,7 @@ def collect_files(target):
 
 
 def read_text(path):
-    with open(path, encoding="utf-8", errors="replace") as handle:
+    with open(path, encoding="utf-8-sig", errors="replace") as handle:
         return handle.read()
 
 
@@ -128,31 +135,62 @@ def comment_config(lang):
     return token, block
 
 
+def open_block(stripped, block, token):
+    if not any(opener == closer for opener, closer in block):
+        return None
+    index = 0
+    limit = len(stripped)
+    while index < limit:
+        rest = stripped[index:]
+        if rest.startswith(token):
+            return None
+        for opener, closer in block:
+            if opener == closer and rest.startswith(opener):
+                end = stripped.find(closer, index + len(opener))
+                if end < 0:
+                    return closer
+                index = end + len(closer)
+                break
+        else:
+            char = stripped[index]
+            if char in "'\"`":
+                end = stripped.find(char, index + 1)
+                index = limit if end < 0 else end + 1
+            else:
+                index += 1
+    return None
+
+
 def count_lines(lang, text):
     token, block = comment_config(lang)
     code = comment = tabs = spaces = 0
-    in_block = None
+    pending = None
     for line in text.splitlines():
         stripped = line.strip()
-        if in_block is not None:
-            comment += 1
-            if in_block in line:
-                in_block = None
+        if pending is not None:
+            closer, is_comment = pending
+            if stripped:
+                if is_comment:
+                    comment += 1
+                else:
+                    code += 1
+            if closer in line:
+                pending = None
             continue
         if not stripped:
+            continue
+        if stripped.startswith(token):
+            comment += 1
             continue
         hit = False
         for opener, closer in block:
             if stripped.startswith(opener):
                 comment += 1
                 if closer not in stripped[len(opener):]:
-                    in_block = closer
+                    pending = (closer, True)
                 hit = True
                 break
         if hit:
-            continue
-        if stripped.startswith(token):
-            comment += 1
             continue
         code += 1
         leading = line[: len(line) - len(line.lstrip())]
@@ -160,6 +198,9 @@ def count_lines(lang, text):
             tabs += 1
         elif leading.startswith(" "):
             spaces += 1
+        closer = open_block(stripped, block, token)
+        if closer:
+            pending = (closer, False)
     return code, comment, tabs, spaces
 
 
@@ -209,8 +250,8 @@ def add_identifier_cases(lang, text, naming, lengths, boolean_names):
                     boolean_names.append(name)
 
 
-def leading_spaces(line):
-    return len(line) - len(line.lstrip(" "))
+def leading_indent(line):
+    return len(line) - len(line.lstrip())
 
 
 def py_function_lengths(text):
@@ -219,13 +260,13 @@ def py_function_lengths(text):
     for index, line in enumerate(lines):
         if not re.match(r"^\s*(?:async\s+)?def\s+[A-Za-z_]\w*", line):
             continue
-        indent = leading_spaces(line)
+        indent = leading_indent(line)
         end = index + 1
         for cursor in range(index + 1, len(lines)):
             stripped = lines[cursor].strip()
             if not stripped:
                 continue
-            if leading_spaces(lines[cursor]) <= indent and not stripped.startswith("#"):
+            if leading_indent(lines[cursor]) <= indent and not stripped.startswith("#"):
                 break
             end = cursor + 1
         lengths.append(max(1, end - index))
@@ -269,6 +310,15 @@ def function_lengths(lang, text):
     return []
 
 
+def closes_doc_block(lines, cursor):
+    if not lines[cursor].strip().endswith("*/"):
+        return False
+    opener = cursor
+    while opener >= 0 and "/*" not in lines[opener]:
+        opener -= 1
+    return opener >= 0 and lines[opener].strip().startswith("/**")
+
+
 def doc_coverage(lang, text):
     lines = text.splitlines()
     total = 0
@@ -299,7 +349,10 @@ def doc_coverage(lang, text):
             cursor = index - 1
             while cursor >= 0 and not lines[cursor].strip():
                 cursor -= 1
-            if cursor >= 0 and lines[cursor].strip().startswith(("/**", "///", "//")):
+            if cursor < 0:
+                continue
+            markers = DOC_MARKERS.get(lang, DOC_MARKERS["default"])
+            if lines[cursor].strip().startswith(markers) or closes_doc_block(lines, cursor):
                 documented += 1
     return documented, total
 
@@ -310,6 +363,7 @@ def analyze_language(lang, paths):
         "files_total": len(paths),
         "files_read": 0,
         "files_skipped_large": 0,
+        "files_skipped_minified": 0,
         "read_errors": 0,
         "code_lines": 0,
         "comment_lines": 0,
@@ -340,6 +394,11 @@ def analyze_language(lang, paths):
             result["read_errors"] += 1
             continue
 
+        lines = text.splitlines()
+        if lines and len(text) / len(lines) > MAX_BYTES_PER_LINE:
+            result["files_skipped_minified"] += 1
+            continue
+
         result["files_read"] += 1
         code, comment, tabs, spaces = count_lines(lang, text)
         result["code_lines"] += code
@@ -363,7 +422,7 @@ def analyze_language(lang, paths):
     result["naming"] = {kind: dict(counter) for kind, counter in naming.items()}
     result["identifier_lengths"] = {kind: summarize(values) for kind, values in lengths.items()}
     result["function_lengths"] = summarize(fn_lengths)
-    prefixed = sum(1 for name in boolean_names if name.startswith(BOOLEAN_PREFIXES))
+    prefixed = sum(1 for name in boolean_names if BOOLEAN_PREFIX_RE.match(name))
     result["boolean_prefix_share"] = {
         "count": len(boolean_names),
         "prefixed": prefixed,
@@ -408,6 +467,8 @@ def print_text(results, target):
             print("  sampled  : capped at %d files" % MAX_FILES_PER_LANG)
         if result["files_skipped_large"]:
             print("  skipped  : %d oversized files" % result["files_skipped_large"])
+        if result["files_skipped_minified"]:
+            print("  skipped  : %d minified or generated files" % result["files_skipped_minified"])
         if result["read_errors"]:
             print("  unread   : %d files" % result["read_errors"])
         print("  comments : %s%% of non-blank lines" % result["comment_density"])
@@ -455,6 +516,8 @@ def print_text(results, target):
             print("  bool pref: %s%% of lowercase identifiers" % result["boolean_prefix_share"]["percent"])
         if any("lower" in counts for counts in result["naming"].values()):
             print("  note     : lower means single-word names compatible with snake_case or camelCase")
+        if any("UPPER" in result["naming"].get(kind, {}) for kind in ("constant", "variable")):
+            print("  note     : UPPER means a single-word all-caps constant, compatible with SCREAMING_SNAKE")
 
 
 def main(argv=None):

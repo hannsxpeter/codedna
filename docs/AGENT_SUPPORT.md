@@ -40,14 +40,14 @@ The bundled `skill/scripts/codedna_wire.py` helper performs this update and pres
 | Cursor | `AGENTS.md` or `.cursor/rules/codedna.mdc` |
 | Windsurf/Cascade | `AGENTS.md`, `.devin/rules/codedna.md`, or `.windsurf/rules/codedna.md` |
 
-If a repo already uses one of these files, codedna updates only the block between `<!-- codedna:start -->` and `<!-- codedna:end -->`. If no agent instruction file exists, codedna creates `AGENTS.md` as the portable baseline unless the user asks otherwise.
+If a repo already uses one of these files, codedna updates only the block between `<!-- codedna:start -->` and `<!-- codedna:end -->` and leaves the rest of the file untouched. By default codedna creates or updates `AGENTS.md` as the portable baseline whether or not other instruction files are present, and it updates the tool-specific files or rule directories the repo already has. Run the helper with `--all` to create every supported file, or with `--agent <name>` to select specific targets.
 
 ## Release package install
 
 Release tarballs contain the skill bundle, installer, docs, tests, and license:
 
 ```sh
-curl -L https://github.com/hannsxpeter/codedna/releases/download/v1.0.2/codedna-v1.0.2.tar.gz | tar xz
-cd codedna-1.0.2
+curl -L https://github.com/hannsxpeter/codedna/releases/download/v1.0.3/codedna-v1.0.3.tar.gz | tar xz
+cd codedna-1.0.3
 ./install.sh codex
 ```

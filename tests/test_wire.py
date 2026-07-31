@@ -78,6 +78,59 @@ class WireTests(unittest.TestCase):
             self.assertTrue((root / ".windsurf/rules/codedna.md").exists())
             self.assertFalse((root / ".devin/rules/codedna.md").exists())
 
+    def test_repeated_wiring_is_byte_identical(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            agents = root / "AGENTS.md"
+
+            self.wire.wire(root)
+            first = agents.read_bytes()
+            self.wire.wire(root)
+            self.wire.wire(root)
+
+            self.assertEqual(first, agents.read_bytes())
+
+    def test_preserves_indentation_after_the_block(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            agents = root / "AGENTS.md"
+            agents.write_text(
+                "# Doc\n\n<!-- codedna:start -->\nold\n<!-- codedna:end -->\n\n    indented = 1\n",
+                encoding="utf-8",
+            )
+
+            self.wire.wire(root)
+
+            self.assertIn("\n    indented = 1\n", agents.read_text(encoding="utf-8"))
+
+    def test_stray_end_marker_does_not_duplicate_the_block(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            agents = root / "AGENTS.md"
+            agents.write_text(
+                "<!-- codedna:end -->\n\nintro\n\n<!-- codedna:start -->\nold\n<!-- codedna:end -->\n",
+                encoding="utf-8",
+            )
+
+            self.wire.wire(root)
+            self.wire.wire(root)
+            text = agents.read_text(encoding="utf-8")
+
+            self.assertEqual(text.count("<!-- codedna:start -->"), 1)
+            self.assertIn("intro", text)
+
+    def test_lone_start_marker_is_left_alone(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            agents = root / "AGENTS.md"
+            agents.write_text("# Doc\n\n<!-- codedna:start -->\n\nTail.\n", encoding="utf-8")
+
+            self.wire.wire(root)
+            text = agents.read_text(encoding="utf-8")
+
+            self.assertIn("Tail.", text)
+            self.assertEqual(text.count("<!-- codedna:end -->"), 1)
+
     def test_json_cli_output(self):
         with tempfile.TemporaryDirectory() as tmp:
             proc = subprocess.run(

@@ -2,6 +2,35 @@
 
 All notable changes to codedna are documented in this file. The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.3] - 2026-07-31
+
+Accuracy release. Every change below corrects a measurement or a claim that was wrong, so profiles generated with 1.0.2 may report different numbers after upgrading. That is the point.
+
+### Fixed
+
+- Fix comment density and code-line counts for Python files that open a multi-line string mid-line (SQL blobs, templates, prompt constants). The closing triple quote was read as the start of a docstring, so the remainder of the file was counted as comment. On codedna's own repository this reported 13.4% comment density against a true 0.9%.
+- Count multi-line JSDoc blocks as documentation. Only single-line `/** ... */` was recognized, understating doc-comment coverage on any codebase that uses conventional JSDoc.
+- Stop counting a plain `//` aside as a doc comment outside Go. Go keeps `//`, since that is its documentation convention.
+- Measure function length in tab-indented Python. Every function in a tab-indented file was reported as one line long.
+- Read files with a UTF-8 byte order mark so the first line is not hidden from every pattern.
+- Skip minified and generated files, which dominated naming and identifier-length histograms and could invert the reported dominant convention. Skipped files are disclosed in the output.
+- Require a word boundary for boolean prefixes, so `issue` and `island` no longer count as `is`-prefixed.
+- Do not count blank lines inside a block comment toward a metric defined as a percentage of non-blank lines.
+- Match the `<!-- codedna:start -->` and `<!-- codedna:end -->` markers as a pair when wiring. A stray closing marker earlier in the file made every run append another block.
+- Preserve indentation after the wired block, and leave instruction files byte-identical when re-wiring. The second run on a fresh repository previously produced a spurious diff.
+
+### Changed
+
+- Note in the stats output when `UPPER` marks a single-word all-caps constant compatible with `SCREAMING_SNAKE`, mirroring the existing `lower` note.
+- Correct `CONTRIBUTING.md`, which presented the wiring helper as a read-only sanity check. It writes files, and the instructions now say so and point at a throwaway copy.
+- Correct `docs/AGENT_SUPPORT.md`, which said `AGENTS.md` is created only when no other instruction file exists. It is created or updated either way.
+
+### Added
+
+- Add regression tests for every fix above, doubling the suite from 15 tests to 33.
+- Add a test asserting the version in `skill/SKILL.md` matches every other version reference in the skill and the agent support docs, including the release tarball URL.
+- Accept `start_marker` and `end_marker` arguments in `replace_block`. Nothing passes them yet; they exist so a sibling skill can reuse the helper without its markers defaulting to codedna's.
+
 ## [1.0.2] - 2026-07-13
 
 ### Changed
@@ -55,6 +84,7 @@ Initial release.
 - **Profile template**: a fixed `CODEDNA.md` structure that enforces specificity and pairs every convention with a real snippet.
 - Packaged as a single self-contained file, `codedna.md`, plus an `install.sh` for one-command installation.
 
+[1.0.3]: https://github.com/hannsxpeter/codedna/releases/tag/v1.0.3
 [1.0.2]: https://github.com/hannsxpeter/codedna/releases/tag/v1.0.2
 [1.0.1]: https://github.com/hannsxpeter/codedna/releases/tag/v1.0.1
 [1.0.0]: https://github.com/hannsxpeter/codedna/releases/tag/v1.0.0

@@ -1,4 +1,5 @@
 import os
+import re
 import stat
 import subprocess
 import tempfile
@@ -7,6 +8,10 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
+SKILL = ROOT / "skill" / "SKILL.md"
+SUPPORT = ROOT / "docs" / "AGENT_SUPPORT.md"
+VERSION = re.search(r"^Version: (\S+)$", SKILL.read_text(encoding="utf-8"), re.M).group(1)
+SEMVER_RE = re.compile(r"\d+\.\d+\.\d+")
 
 
 class InstallTests(unittest.TestCase):
@@ -69,10 +74,8 @@ class InstallTests(unittest.TestCase):
                 self.assertTrue(mode & stat.S_IXUSR)
                 self.assertTrue(wire_mode & stat.S_IXUSR)
             self.assertFalse(stale.exists())
-            self.assertIn("Installed codedna v1.0.2 for Claude Code", proc.stdout)
-            self.assertIn("Installed codedna v1.0.2 for Codex", proc.stdout)
-            self.assertIn("Installed codedna v1.0.2 for Cursor", proc.stdout)
-            self.assertIn("Installed codedna v1.0.2 for Windsurf/Cascade", proc.stdout)
+            for label in ["Claude Code", "Codex", "Cursor", "Windsurf/Cascade"]:
+                self.assertIn("Installed codedna v%s for %s" % (VERSION, label), proc.stdout)
 
     def test_install_single_target(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -90,7 +93,14 @@ class InstallTests(unittest.TestCase):
             )
 
             self.assertTrue((dest / "codedna" / "SKILL.md").exists())
-            self.assertIn("Installed codedna v1.0.2 for Codex", proc.stdout)
+            self.assertIn("Installed codedna v%s for Codex" % VERSION, proc.stdout)
+
+    def test_version_is_consistent_across_skill_and_docs(self):
+        found = set()
+        for path in [SKILL, SUPPORT]:
+            found.update(SEMVER_RE.findall(path.read_text(encoding="utf-8")))
+
+        self.assertEqual({VERSION}, found)
 
 
 if __name__ == "__main__":

@@ -35,14 +35,22 @@ Then validate the skill behavior manually:
 2. In a supported coding-agent session, point it at a real repository: "build the codedna for this repo."
 3. Read the generated `CODEDNA.md`. Ask whether each line is specific enough that it would read differently for a different codebase. Generic lines are the most common regression.
 
-To sanity-check the stats helper on its own, run:
+To sanity-check the stats helper on its own, run it against any repo. It only reads:
 
 ```sh
 python3 skill/scripts/codedna_stats.py /path/to/some/repo
-python3 skill/scripts/codedna_wire.py /path/to/some/repo
 ```
 
-It should report a language inventory with naming-casing histograms, comment density, indentation, and quote style, and it should disclose capped samples, skipped oversized files, and unreadable files.
+It should report a language inventory with naming-casing histograms, comment density, indentation, and quote style, and it should disclose capped samples, skipped oversized files, skipped minified files, and unreadable files.
+
+The wiring helper writes files. It always creates or updates `AGENTS.md`, it adds or replaces a codedna block in `CLAUDE.md`, `GEMINI.md`, and `.github/copilot-instructions.md` when those files already exist, and it writes `.cursor/rules/codedna.mdc` or a Windsurf/Cascade `codedna.md` when the corresponding `.cursor/rules`, `.windsurf/rules`, or `.devin/rules` directory exists. Point it at a throwaway copy, not a repo you care about:
+
+```sh
+tmp="$(mktemp -d)" && cp -R /path/to/some/repo "$tmp/repo"
+python3 skill/scripts/codedna_wire.py "$tmp/repo"
+```
+
+It should print one line per file it created or updated, and re-running it should leave those files byte-identical.
 
 ## Pull requests
 

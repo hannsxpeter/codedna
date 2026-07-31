@@ -3,6 +3,7 @@
 
 import argparse
 import json
+import re
 from pathlib import Path
 
 START = "<!-- codedna:start -->"
@@ -38,12 +39,18 @@ PLAIN_TARGETS = {
 ALL_TARGETS = ["agents", "claude", "gemini", "copilot", "cursor", "cascade"]
 
 
-def replace_block(text, block=PLAIN_BLOCK):
-    start = text.find(START)
-    end = text.find(END)
-    if start != -1 and end != -1 and start < end:
-        end += len(END)
-        updated = text[:start].rstrip() + "\n\n" + block.rstrip() + "\n" + text[end:].lstrip()
+def block_pattern(start_marker, end_marker):
+    return re.compile(re.escape(start_marker) + ".*?" + re.escape(end_marker), re.S)
+
+
+def replace_block(text, block=PLAIN_BLOCK, start_marker=START, end_marker=END):
+    match = block_pattern(start_marker, end_marker).search(text)
+    if match:
+        head = text[: match.start()].rstrip()
+        tail = text[match.end():].lstrip("\n")
+        updated = (head + "\n\n" if head else "") + block.rstrip() + "\n"
+        if tail:
+            updated += "\n" + tail
         return updated.rstrip() + "\n"
     if text.strip():
         return text.rstrip() + "\n\n" + block
