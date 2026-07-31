@@ -2,6 +2,7 @@
 
 > Fingerprint a codebase's style so AI-written code is indistinguishable from the author's own.
 
+[![CI](https://github.com/hannsxpeter/codedna/actions/workflows/ci.yml/badge.svg)](https://github.com/hannsxpeter/codedna/actions/workflows/ci.yml)
 [![Release](https://img.shields.io/github/v/release/hannsxpeter/codedna?sort=semver)](https://github.com/hannsxpeter/codedna/releases)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Agent skill](https://img.shields.io/badge/coding%20agents-skill-8A2BE2)](https://agents.md)
