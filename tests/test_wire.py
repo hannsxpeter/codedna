@@ -126,10 +126,64 @@ class WireTests(unittest.TestCase):
             agents.write_text("# Doc\n\n<!-- codedna:start -->\n\nTail.\n", encoding="utf-8")
 
             self.wire.wire(root)
+            self.wire.wire(root)
             text = agents.read_text(encoding="utf-8")
 
             self.assertIn("Tail.", text)
             self.assertEqual(text.count("<!-- codedna:end -->"), 1)
+
+    def test_lone_start_marker_does_not_swallow_a_foreign_block(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            agents = root / "AGENTS.md"
+            agents.write_text(
+                "# Doc\n\n<!-- codedna:start -->\n\n"
+                "<!-- other:start -->\nforeign\n<!-- other:end -->\n\nTail.\n",
+                encoding="utf-8",
+            )
+
+            self.wire.wire(root)
+            self.wire.wire(root)
+            text = agents.read_text(encoding="utf-8")
+
+            self.assertIn("Tail.", text)
+            self.assertIn("<!-- other:start -->", text)
+            self.assertIn("foreign", text)
+
+    def test_start_marker_inside_the_replaced_body_keeps_the_tail(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            agents = root / "AGENTS.md"
+            agents.write_text(
+                "# Doc\n\n<!-- codedna:start -->\n"
+                "old body naming <!-- codedna:start --> inline\n"
+                "<!-- codedna:end -->\n\nTail.\n",
+                encoding="utf-8",
+            )
+
+            self.wire.wire(root)
+            first = agents.read_text(encoding="utf-8")
+            self.wire.wire(root)
+
+            self.assertEqual(first, agents.read_text(encoding="utf-8"))
+            self.assertIn("Tail.", first)
+            self.assertIn("## Code style", first)
+
+    def test_replace_block_honors_custom_markers(self):
+        text = (
+            "<!-- codedna:start -->\nkeep\n<!-- codedna:end -->\n\n"
+            "<!-- other:start -->\nstale\n<!-- other:end -->\n"
+        )
+        updated = self.wire.replace_block(
+            text,
+            "<!-- other:start -->\nfresh\n<!-- other:end -->\n",
+            "<!-- other:start -->",
+            "<!-- other:end -->",
+        )
+
+        self.assertIn("keep", updated)
+        self.assertIn("fresh", updated)
+        self.assertNotIn("stale", updated)
 
     def test_json_cli_output(self):
         with tempfile.TemporaryDirectory() as tmp:

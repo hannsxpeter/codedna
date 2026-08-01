@@ -40,7 +40,8 @@ ALL_TARGETS = ["agents", "claude", "gemini", "copilot", "cursor", "cascade"]
 
 
 def block_pattern(start_marker, end_marker):
-    return re.compile(re.escape(start_marker) + ".*?" + re.escape(end_marker), re.S)
+    inner = "(?:(?!" + re.escape(start_marker) + ").)*?"
+    return re.compile(re.escape(start_marker) + inner + re.escape(end_marker), re.S)
 
 
 def replace_block(text, block=PLAIN_BLOCK, start_marker=START, end_marker=END):
@@ -57,14 +58,14 @@ def replace_block(text, block=PLAIN_BLOCK, start_marker=START, end_marker=END):
     return block
 
 
-def write_target(path, body, prefix=""):
+def write_target(path, body, prefix="", start_marker=START, end_marker=END):
     existed = path.exists()
     path.parent.mkdir(parents=True, exist_ok=True)
     text = path.read_text(encoding="utf-8") if existed else ""
     if not text.strip() and prefix:
         updated = prefix + body
     else:
-        updated = replace_block(text, body)
+        updated = replace_block(text, body, start_marker, end_marker)
         if not existed and prefix:
             updated = prefix + updated
     path.write_text(updated, encoding="utf-8")
@@ -111,7 +112,7 @@ def wire(root, targets=None, all_targets=False):
             continue
         seen.add(target)
         path, prefix, body = target_path(root, target)
-        action = write_target(path, body, prefix)
+        action = write_target(path, body, prefix, START, END)
         results.append({"target": target, "path": str(path), "action": action})
     return results
 

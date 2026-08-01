@@ -2,6 +2,23 @@
 
 All notable changes to codedna are documented in this file. The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.4] - 2026-08-01
+
+Robustness release. One wiring fix restores a guarantee the docs already made. Nothing here changes a measurement, so profiles generated with 1.0.3 report the same numbers.
+
+### Fixed
+
+- Stop the wiring helper from deleting content between an unpaired `<!-- codedna:start -->` marker and the real block below it. A file left carrying a start marker with no matching end marker lost everything in between on the second run, including another tool's block and the user's own prose. `docs/AGENT_SUPPORT.md` already stated that the rest of the file is left untouched; now it is. The unpaired marker is left where it sits rather than absorbed.
+
+### Changed
+
+- Pass the block markers explicitly from `write_target` into `replace_block` instead of letting them fall back to the module constants. Output is byte-identical. The helper no longer assumes the markers it is handed are the ones it was built with.
+- Correct `skill/SKILL.md`, which called the TODO/FIXME figure a density. The stats helper reports a count.
+
+### Added
+
+- Add regression tests for the unpaired-marker fix, for a start marker appearing inside the block being replaced, and for `replace_block` with non-default markers. The suite is 36 tests.
+
 ## [1.0.3] - 2026-07-31
 
 Accuracy release. Every change below corrects a measurement or a claim that was wrong, so profiles generated with 1.0.2 may report different numbers after upgrading. That is the point.
@@ -84,6 +101,7 @@ Initial release.
 - **Profile template**: a fixed `CODEDNA.md` structure that enforces specificity and pairs every convention with a real snippet.
 - Packaged as a single self-contained file, `codedna.md`, plus an `install.sh` for one-command installation.
 
+[1.0.4]: https://github.com/hannsxpeter/codedna/releases/tag/v1.0.4
 [1.0.3]: https://github.com/hannsxpeter/codedna/releases/tag/v1.0.3
 [1.0.2]: https://github.com/hannsxpeter/codedna/releases/tag/v1.0.2
 [1.0.1]: https://github.com/hannsxpeter/codedna/releases/tag/v1.0.1
