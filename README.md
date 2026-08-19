@@ -1,13 +1,13 @@
 # codedna
 
-> Fingerprint a codebase's style so AI-written code is indistinguishable from the author's own.
+> Fingerprint a codebase's code and repository prose so AI-written contributions match the author's own.
 
 [![CI](https://github.com/hannsxpeter/codedna/actions/workflows/ci.yml/badge.svg)](https://github.com/hannsxpeter/codedna/actions/workflows/ci.yml)
 [![Release](https://img.shields.io/github/v/release/hannsxpeter/codedna?sort=semver)](https://github.com/hannsxpeter/codedna/releases)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Agent skill](https://img.shields.io/badge/coding%20agents-skill-8A2BE2)](https://agents.md)
 
-codedna is a portable coding-agent skill. It studies a codebase the way you would study a writer's voice, writes the conventions down in a profile, and uses that profile so future contributions read as if the original author wrote them.
+codedna is a portable coding-agent skill. It studies a codebase the way you would study a writer's voice, writes the conventions down in a profile, and uses that profile so future contributions read as if the original author wrote them. The profile covers code and the prose inside a repository: comments, docs, errors, logs, test descriptions, and CLI or UI text.
 
 ## The problem
 
@@ -23,7 +23,7 @@ Three modes, one profile:
 | --- | --- | --- |
 | **Map** | Scan a codebase and write `CODEDNA.md`, the style profile. | "build the codedna for this repo" |
 | **Match** | Write new code that follows the profile so it blends in. | "add this in the style of the repo" |
-| **Check** | Review a diff or file against the profile and report the tells. | "does this look AI-generated?" |
+| **Check** | Review code, docs, a diff, or pasted text against the profile and report the tells. | "does this look AI-generated?" |
 
 Map also wires idempotent pointers into agent instruction files, so the profile loads automatically in the tools your repo uses and actually gets used.
 
@@ -72,7 +72,7 @@ Map a repository:
 > build the codedna for this repo
 ```
 
-codedna reads the linter and formatter configs as ground truth, runs a bundled stdlib-only stats pass for grounded frequencies (naming casing, comment density, indentation, quotes), close-reads a representative sample for voice, then writes `CODEDNA.md` and points the repo's agent instruction files at it.
+codedna reads the linter and formatter configs as ground truth, runs a bundled stdlib-only stats pass for grounded frequencies (naming casing, comment density, indentation, quotes, comment voice, and error-message style), close-reads a representative sample for code and prose voice, then writes `CODEDNA.md` and points the repo's agent instruction files at it.
 
 Write code that blends in:
 
@@ -101,6 +101,7 @@ chmod +x .git/hooks/pre-commit
 
 - **Naming**, casing per identifier kind, verb dialect (`get` vs `fetch` vs `load`), abbreviations, boolean prefixes, file-name style.
 - **Comments and documentation**, density, the why-vs-what split, register (terse fragments vs full sentences), doc-comment norms.
+- **Human-facing prose by channel**, errors, validation, logs, test descriptions, CLI or UI text, and repository docs, without assuming they all use one voice.
 - **Structure**, function size, extraction threshold, file organization, paradigm.
 - **Control flow and error handling**, early returns vs nesting, async style, how defensive the code is.
 - **Types, imports, tests**, and the conventions that govern them.
@@ -117,17 +118,20 @@ chmod +x .git/hooks/pre-commit
 2. Comment only the non-obvious why. Most functions have no comment.
 3. Errors are terse `throw new Error("...")`. No custom error classes.
 4. Functions are small (median ~9 lines); repetition is tolerated over premature abstraction.
+5. Comments are short sentence fragments; error strings are lowercase and omit terminal punctuation.
 ```
 
 Every line is concrete enough that it would read differently for a different codebase. The skill enforces that discipline: if a convention would be true of almost any repo, it gets sharpened or cut.
+
+The profile records positive voice cues as well as things to avoid. A terse fragment, a recurring error verb, or direct second-person documentation can be part of the fingerprint. Generic prose checks for filler, puffery, vague attribution, canned chatbot language, forced rhetorical structure, and abstract jargon apply only when repository evidence is silent. Local examples always win.
 
 ## How it works
 
 codedna analyzes in layers, cheapest and most authoritative first:
 
 1. **Config files** (`.editorconfig`, Prettier, ESLint, `pyproject.toml`, `rustfmt.toml`, and friends) are enforced, so they settle whole categories up front and are recorded as such.
-2. **Bundled stdlib-only helpers** ground the profile in real frequencies and wire `CODEDNA.md` into agent instruction files.
-3. **Close reading** of a representative sample captures the voice that numbers cannot.
+2. **Bundled stdlib-only helpers** ground the profile in real frequencies, including comment length, sentence style, person and contraction use, and literal error-message capitalization and punctuation. The measurements describe the corpus; they are not lint rules.
+3. **Close reading** of a representative sample captures channel-specific voice and the positive habits that numbers cannot.
 
 The skill entrypoint lives at `skill/SKILL.md`, with executable helpers kept as files beside it so they can be run and tested directly. Agents without a global skill mechanism still benefit from the generated `CODEDNA.md` and repo-level instruction files.
 

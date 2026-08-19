@@ -71,6 +71,8 @@ class StatsTests(unittest.TestCase):
         self.assertIn("identifier_lengths", payload[0])
         self.assertEqual(payload[0]["doc_comment_coverage"]["functions"], 3)
         self.assertEqual(payload[0]["doc_comment_coverage"]["documented"], 1)
+        self.assertIn("comment_voice", payload[0])
+        self.assertIn("error_message_voice", payload[0])
 
     def test_reports_deeper_style_metrics(self):
         results = {item["language"]: item for item in self.stats.analyze(ROOT / "tests" / "fixtures" / "terse_js")}
@@ -80,6 +82,74 @@ class StatsTests(unittest.TestCase):
         self.assertGreaterEqual(js["function_lengths"]["p90"], js["function_lengths"]["median"])
         self.assertGreater(js["identifier_lengths"]["function"]["median"], 0)
         self.assertGreater(js["boolean_prefix_share"]["prefixed"], 0)
+
+    def test_reports_comment_voice_metrics(self):
+        results = {item["language"]: item for item in self.stats.analyze(ROOT / "tests" / "fixtures" / "voice_py")}
+        voice = results["py"]["comment_voice"]
+
+        self.assertEqual(voice["lines"], 3)
+        self.assertEqual(voice["word_lengths"]["median"], 5)
+        self.assertEqual(voice["sentence_like_percent"], 66.7)
+        self.assertEqual(voice["fragment_like_percent"], 33.3)
+        self.assertEqual(voice["capitalized_percent"], 66.7)
+        self.assertEqual(voice["terminal_punctuation_percent"], 66.7)
+        self.assertEqual(voice["first_person_percent"], 33.3)
+        self.assertEqual(voice["second_person_percent"], 0.0)
+        self.assertEqual(voice["contractions_percent"], 33.3)
+
+    def test_reports_error_message_voice(self):
+        results = {item["language"]: item for item in self.stats.analyze(ROOT / "tests" / "fixtures" / "voice_py")}
+        voice = results["py"]["error_message_voice"]
+
+        self.assertEqual(voice["messages"], 2)
+        self.assertEqual(voice["capitalized_percent"], 50.0)
+        self.assertEqual(voice["terminal_punctuation_percent"], 50.0)
+
+    def test_extracts_block_comment_voice_without_decorators(self):
+        text = "/**\n * You can retry this.\n * keep state local\n */\nconst value = 1;\n"
+
+        self.assertEqual(self.stats.comment_texts("js", text), ["You can retry this.", "keep state local"])
+
+    def test_midline_python_string_is_not_comment_voice(self):
+        text = 'SQL = """\nSELECT 1\n"""\n# actual note\n'
+
+        self.assertEqual(self.stats.comment_texts("py", text), ["actual note"])
+
+    def test_extracts_error_messages_by_language(self):
+        js = 'throw new TypeError("Bad input.");\nthrow Error(\'missing value\');\n'
+        go = 'return errors.New("not found")\nreturn fmt.Errorf("Read failed.")\n'
+
+        self.assertEqual(self.stats.error_messages("js", js), ["Bad input.", "missing value"])
+        self.assertEqual(self.stats.error_messages("go", go), ["not found", "Read failed."])
+
+    def test_error_messages_ignore_comments_and_multiline_strings(self):
+        text = (
+            '# raise ValueError("commented")\n'
+            'PROMPT = """\nraise RuntimeError("prompt text")\n"""\n'
+            'raise KeyError("real error")\n'
+        )
+
+        self.assertEqual(self.stats.error_messages("py", text), ["real error"])
+
+    def test_extracts_supported_error_message_patterns(self):
+        samples = {
+            "js": 'throw new TypeError("bad")',
+            "ts": 'throw Error("bad")',
+            "py": 'raise ValueError("bad")',
+            "go": 'return errors.New("bad")',
+            "rs": 'panic!("bad")',
+            "java": 'throw new IllegalArgumentException("bad")',
+            "kt": 'throw IllegalArgumentException("bad")',
+            "cs": 'throw new InvalidOperationException("bad")',
+            "php": 'throw new \\RuntimeException("bad")',
+            "rb": 'raise ArgumentError, "bad"',
+            "swift": 'fatalError("bad")',
+            "cpp": 'throw std::runtime_error("bad")',
+        }
+
+        for language, source in samples.items():
+            with self.subTest(language=language):
+                self.assertEqual(self.stats.error_messages(language, source), ["bad"])
 
     def test_midline_string_terminator_is_not_a_docstring(self):
         text = 'SQL = """\nSELECT 1\n"""\n\n\ndef load():\n    return 1\n'

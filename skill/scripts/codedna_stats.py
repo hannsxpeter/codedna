@@ -52,6 +52,29 @@ HASH_COMMENT = {"py", "rb"}
 QUOTE_LANGS = {"js", "ts", "py", "rb", "php"}
 BOOLEAN_PREFIX_RE = re.compile(r"^(?:is|has|should|can|will|did)(?:[A-Z_]|$)")
 TODO_RE = re.compile(r"\b(?:TODO|FIXME)\b")
+WORD_RE = re.compile(r"\b[\w][\w'-]*\b", re.UNICODE)
+FIRST_PERSON_RE = re.compile(r"\b(?:I|me|my|mine|we|us|our|ours)\b", re.I)
+SECOND_PERSON_RE = re.compile(r"\b(?:you|your|yours)\b", re.I)
+CONTRACTION_RE = re.compile(
+    r"\b(?:[A-Za-z]+n't|(?:I|you|we|they|he|she|it)'(?:m|re|ve|ll|d|s))\b",
+    re.I,
+)
+MESSAGE_LITERAL = r'(?:"((?:\\.|[^"\\\r\n])*)"|\'((?:\\.|[^\'\\\r\n])*)\'|`((?:\\.|[^`\\\r\n])*)`)'
+
+ERROR_PREFIXES = {
+    "js": r"\b(?:new\s+)?(?:[A-Za-z_$][\w$]*Error|Error)\s*\(\s*",
+    "ts": r"\b(?:new\s+)?(?:[A-Za-z_$][\w$]*Error|Error)\s*\(\s*",
+    "py": r"\braise\s+(?:[A-Za-z_]\w*(?:Error|Exception)|Error|Exception)\s*\(\s*",
+    "go": r"\b(?:errors\.New|fmt\.Errorf)\s*\(\s*",
+    "rs": r"(?:\bpanic!|\bbail!|\banyhow!|\.expect)\s*\(\s*",
+    "java": r"\bthrow\s+new\s+(?:[A-Za-z_]\w*(?:Exception|Error)|Exception|Error)\s*\(\s*",
+    "kt": r"\bthrow\s+(?:[A-Za-z_]\w*(?:Exception|Error)|Exception|Error)\s*\(\s*",
+    "cs": r"\bthrow\s+new\s+(?:[A-Za-z_]\w*(?:Exception|Error)|Exception|Error)\s*\(\s*",
+    "php": r"\bthrow\s+new\s+\\?(?:[A-Za-z_]\w*(?:Exception|Error)|Exception|Error)\s*\(\s*",
+    "rb": r"\braise(?:\s+[A-Za-z_:]+\s*,)?\s*",
+    "swift": r"\b(?:fatalError|preconditionFailure)\s*\(\s*",
+    "cpp": r"\bthrow\s+(?:std::)?[A-Za-z_]\w*(?:error|exception)\s*\(\s*",
+}
 
 DOC_MARKERS = {
     "default": ("/**", "///"),
@@ -215,6 +238,146 @@ def count_quotes(lang, text):
     return counts
 
 
+def clean_comment_text(value):
+    text = value.strip()
+    if text.startswith("*"):
+        text = text[1:].strip()
+    return text
+
+
+def comment_texts(lang, text):
+    token, block = comment_config(lang)
+    comments = []
+    pending = None
+
+    for line in text.splitlines():
+        stripped = line.strip()
+        if pending is not None:
+            closer, is_comment = pending
+            end = stripped.find(closer)
+            if is_comment:
+                value = stripped if end < 0 else stripped[:end]
+                value = clean_comment_text(value)
+                if value:
+                    comments.append(value)
+            if end >= 0:
+                pending = None
+            continue
+        if not stripped:
+            continue
+        if stripped.startswith(token):
+            value = clean_comment_text(stripped[len(token):])
+            if value:
+                comments.append(value)
+            continue
+        for opener, closer in block:
+            if not stripped.startswith(opener):
+                continue
+            value = stripped[len(opener):]
+            end = value.find(closer)
+            if end >= 0:
+                value = value[:end]
+            else:
+                pending = (closer, True)
+            value = clean_comment_text(value)
+            if value:
+                comments.append(value)
+            break
+        else:
+            closer = open_block(stripped, block, token)
+            if closer:
+                pending = (closer, False)
+
+    return comments
+
+
+def code_text_lines(lang, text):
+    token, block = comment_config(lang)
+    pending = None
+
+    for line in text.splitlines():
+        stripped = line.strip()
+        if pending is not None:
+            if pending in line:
+                pending = None
+            continue
+        if not stripped or stripped.startswith(token):
+            continue
+        for opener, closer in block:
+            if not stripped.startswith(opener):
+                continue
+            if closer not in stripped[len(opener):]:
+                pending = closer
+            break
+        else:
+            yield line
+            closer = open_block(stripped, block, token)
+            if closer:
+                pending = closer
+
+
+def error_messages(lang, text):
+    prefix = ERROR_PREFIXES.get(lang)
+    if not prefix:
+        return []
+    messages = []
+    for line in code_text_lines(lang, text):
+        for match in re.finditer(prefix + MESSAGE_LITERAL, line, re.I):
+            messages.append(next(group for group in match.groups() if group is not None))
+    return messages
+
+
+def is_capitalized(text):
+    first = next((char for char in text if char.isalpha()), "")
+    return bool(first and first.isupper())
+
+
+def has_terminal_punctuation(text):
+    trimmed = text.rstrip().rstrip("`*_)]}'\"")
+    return bool(trimmed and trimmed[-1] in ".?!")
+
+
+def share(count, total):
+    return round(100 * count / total, 1) if total else 0
+
+
+def comment_voice(texts):
+    samples = [text for text in texts if WORD_RE.search(text)]
+    word_lengths = [len(WORD_RE.findall(text)) for text in samples]
+    capitalized = sum(1 for text in samples if is_capitalized(text))
+    punctuated = sum(1 for text in samples if has_terminal_punctuation(text))
+    sentence_like = sum(
+        1 for text in samples if is_capitalized(text) and has_terminal_punctuation(text)
+    )
+    first_person = sum(1 for text in samples if FIRST_PERSON_RE.search(text))
+    second_person = sum(1 for text in samples if SECOND_PERSON_RE.search(text))
+    contractions = sum(1 for text in samples if CONTRACTION_RE.search(text))
+    total = len(samples)
+    return {
+        "lines": total,
+        "word_lengths": summarize(word_lengths),
+        "sentence_like_percent": share(sentence_like, total),
+        "fragment_like_percent": share(total - sentence_like, total),
+        "capitalized_percent": share(capitalized, total),
+        "terminal_punctuation_percent": share(punctuated, total),
+        "first_person_percent": share(first_person, total),
+        "second_person_percent": share(second_person, total),
+        "contractions_percent": share(contractions, total),
+    }
+
+
+def message_voice(messages):
+    samples = [message.strip() for message in messages if WORD_RE.search(message)]
+    total = len(samples)
+    capitalized = sum(1 for message in samples if is_capitalized(message))
+    punctuated = sum(1 for message in samples if has_terminal_punctuation(message))
+    return {
+        "messages": total,
+        "capitalized_percent": share(capitalized, total),
+        "terminal_punctuation_percent": share(punctuated, total),
+    }
+
+
 def percentile(values, pct):
     if not values:
         return 0
@@ -375,6 +538,8 @@ def analyze_language(lang, paths):
         "boolean_prefix_share": {"count": 0, "prefixed": 0, "percent": 0},
         "todo_markers": 0,
         "doc_comment_coverage": {"functions": 0, "documented": 0, "percent": 0},
+        "comment_voice": comment_voice([]),
+        "error_message_voice": message_voice([]),
     }
     naming = defaultdict(Counter)
     lengths = defaultdict(list)
@@ -383,6 +548,8 @@ def analyze_language(lang, paths):
     boolean_names = []
     documented_functions = 0
     total_functions = 0
+    comments = []
+    messages = []
 
     for path in paths[:MAX_FILES_PER_LANG]:
         try:
@@ -413,6 +580,8 @@ def analyze_language(lang, paths):
         documented_functions += documented
         total_functions += total
         result["todo_markers"] += len(TODO_RE.findall(text))
+        comments.extend(comment_texts(lang, text))
+        messages.extend(error_messages(lang, text))
 
     result["files_capped"] = max(len(paths) - MAX_FILES_PER_LANG, 0)
     total_lines = result["code_lines"] + result["comment_lines"]
@@ -433,6 +602,8 @@ def analyze_language(lang, paths):
         "documented": documented_functions,
         "percent": round(100 * documented_functions / total_functions, 1) if total_functions else 0,
     }
+    result["comment_voice"] = comment_voice(comments)
+    result["error_message_voice"] = message_voice(messages)
     return result
 
 
@@ -498,6 +669,30 @@ def print_text(results, target):
             print("  doc cov  : %s%% of functions" % result["doc_comment_coverage"]["percent"])
         if result["todo_markers"]:
             print("  markers  : TODO/FIXME %d" % result["todo_markers"])
+        if result["comment_voice"]["lines"]:
+            voice = result["comment_voice"]
+            print(
+                "  voice    : comments median %s words / %s%% sentence-like / %s%% first person"
+                % (
+                    voice["word_lengths"]["median"],
+                    voice["sentence_like_percent"],
+                    voice["first_person_percent"],
+                )
+            )
+            print(
+                "             %s%% second person / %s%% contractions"
+                % (voice["second_person_percent"], voice["contractions_percent"])
+            )
+        if result["error_message_voice"]["messages"]:
+            voice = result["error_message_voice"]
+            print(
+                "  errors   : %s%% capitalized / %s%% terminal punctuation (%d messages)"
+                % (
+                    voice["capitalized_percent"],
+                    voice["terminal_punctuation_percent"],
+                    voice["messages"],
+                )
+            )
 
         for kind, counts in result["naming"].items():
             counter = Counter(counts)
@@ -521,7 +716,7 @@ def print_text(results, target):
 
 
 def main(argv=None):
-    parser = argparse.ArgumentParser(description="Print best-effort code style statistics.")
+    parser = argparse.ArgumentParser(description="Print best-effort code and prose style statistics.")
     parser.add_argument("target", nargs="?", default=".")
     parser.add_argument("--json", action="store_true", help="emit JSON instead of text")
     args = parser.parse_args(argv)

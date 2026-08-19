@@ -36,6 +36,7 @@ class WireTests(unittest.TestCase):
             self.assertTrue((root / "AGENTS.md").exists())
             self.assertIn("Keep this.", claude.read_text(encoding="utf-8"))
             self.assertIn("<!-- codedna:start -->", claude.read_text(encoding="utf-8"))
+            self.assertIn("code or repository prose", claude.read_text(encoding="utf-8"))
 
     def test_replaces_existing_block_without_duplicate(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -167,7 +168,7 @@ class WireTests(unittest.TestCase):
 
             self.assertEqual(first, agents.read_text(encoding="utf-8"))
             self.assertIn("Tail.", first)
-            self.assertIn("## Code style", first)
+            self.assertIn("## Code and prose style", first)
 
     def test_replace_block_honors_custom_markers(self):
         text = (
