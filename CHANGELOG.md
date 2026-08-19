@@ -2,6 +2,29 @@
 
 All notable changes to codedna are documented in this file. The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.0] - 2026-08-19
+
+Prose-voice release. CodeDNA now profiles the words inside a repository as part of its fingerprint, while keeping repository evidence stronger than generic writing rules. The stats JSON gains two additive objects per language: `comment_voice` and `error_message_voice`.
+
+### Added
+
+- Measure comment length, sentence-like versus fragment-like style, capitalization, terminal punctuation, first-person and second-person use, and contractions. The text report prints the highest-signal figures and JSON retains the full result.
+- Measure capitalization and terminal punctuation in literal error messages for supported language patterns. Dynamic messages remain a close-reading task rather than being guessed from partial syntax.
+- Profile human-facing prose by channel: comments and docstrings, errors and validation, logs, test descriptions, CLI or UI text, and repository documentation.
+- Add `Human-facing prose` and `Voice cues to preserve` sections to the generated profile template. Profiles now record positive habits to reproduce, not only tells to avoid.
+- Add a repository-aware prose fallback for puffery, vague attribution, formulaic transitions, generic vocabulary and conclusions, rhetorical scaffolding, chatbot residue, filler, hedging, abstract jargon, mechanism-free claims, dense passive sentences, weak verbs, presentation templates, and punctuation drift.
+- Add a focused prose fixture and regression coverage for comment voice, error-message voice, decorated block comments, multiline Python strings, commented errors, and every supported error-message pattern. The suite is 43 tests.
+
+### Changed
+
+- Let Match and Check handle repository prose as well as code. Both compare like channels, so an error message is not judged against README prose unless the repository uses the same voice for both.
+- Update the generated agent-instruction block so installed profiles apply to repository prose and message voice as well as code.
+- Add a final Match self-audit that asks what still sounds unlike the repository.
+- Make generic prose checks subordinate to the profile and neighboring examples. CodeDNA preserves observed irregularities but never invents inconsistency to imitate a human.
+- Replace fixed report counts with evidence-based output. Check returns the highest-signal giveaways instead of forcing three, and the profile TL;DR uses the smallest useful set instead of forcing ten.
+- Update the README and contributor guidance for the new profile sections and measurements.
+- Adapt the prose-review concepts from [pstack's unslop skill](https://github.com/cursor/plugins/blob/main/pstack/skills/unslop/SKILL.md) to CodeDNA's corpus-first model.
+
 ## [1.0.4] - 2026-08-01
 
 Robustness release. One wiring fix restores a guarantee the docs already made. Nothing here changes a measurement, so profiles generated with 1.0.3 report the same numbers.
@@ -101,6 +124,7 @@ Initial release.
 - **Profile template**: a fixed `CODEDNA.md` structure that enforces specificity and pairs every convention with a real snippet.
 - Packaged as a single self-contained file, `codedna.md`, plus an `install.sh` for one-command installation.
 
+[1.1.0]: https://github.com/hannsxpeter/codedna/releases/tag/v1.1.0
 [1.0.4]: https://github.com/hannsxpeter/codedna/releases/tag/v1.0.4
 [1.0.3]: https://github.com/hannsxpeter/codedna/releases/tag/v1.0.3
 [1.0.2]: https://github.com/hannsxpeter/codedna/releases/tag/v1.0.2

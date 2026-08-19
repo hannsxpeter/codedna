@@ -10,9 +10,9 @@ START = "<!-- codedna:start -->"
 END = "<!-- codedna:end -->"
 
 PLAIN_BLOCK = """<!-- codedna:start -->
-## Code style
+## Code and prose style
 
-When writing or editing code in this repo, match the conventions in [CODEDNA.md](CODEDNA.md): naming, formatting, comment voice, structure, and idioms, so new code is indistinguishable from existing code. Before finishing, self-check against the "AI tells" section of that file.
+When writing or editing code or repository prose, match the conventions in [CODEDNA.md](CODEDNA.md): naming, formatting, comment and message voice, structure, and idioms, so new contributions match the existing work. Before finishing, self-check against the "AI tells" section of that file.
 <!-- codedna:end -->
 """
 

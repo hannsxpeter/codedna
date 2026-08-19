@@ -12,6 +12,7 @@ Agent-specific install paths and project wiring are documented in [docs/AGENT_SU
 
 - **Sharpen the analysis.** Add a dimension worth capturing, or a language whose conventions are underserved (the config map and the stats helper both have room to grow).
 - **Improve the AI-tells catalog.** If you have seen a recognizable tell that is not listed, propose it with a detect-and-fix entry.
+- **Improve prose profiling.** Add a channel-specific signal for comments, errors, logs, tests, CLI or UI text, or repository docs. Repository evidence must remain stronger than generic writing advice.
 - **Tune triggering.** The `description` in the frontmatter decides when the skill fires. If it over- or under-triggers for a real prompt, that is a useful issue.
 - **Fix the stats helper.** It is best-effort and stdlib-only by design. Bug reports with a small reproducing snippet are welcome.
 
@@ -41,7 +42,7 @@ To sanity-check the stats helper on its own, run it against any repo. It only re
 python3 skill/scripts/codedna_stats.py /path/to/some/repo
 ```
 
-It should report a language inventory with naming-casing histograms, comment density, indentation, and quote style, and it should disclose capped samples, skipped oversized files, skipped minified files, and unreadable files.
+It should report a language inventory with naming-casing histograms, comment density, indentation, quote style, comment voice, and literal error-message style. It should disclose capped samples, skipped oversized files, skipped minified files, and unreadable files. Treat the voice figures as corpus measurements, not violations.
 
 The wiring helper writes files. It always creates or updates `AGENTS.md`, it adds or replaces a codedna block in `CLAUDE.md`, `GEMINI.md`, and `.github/copilot-instructions.md` when those files already exist, and it writes `.cursor/rules/codedna.mdc` or a Windsurf/Cascade `codedna.md` when the corresponding `.cursor/rules`, `.windsurf/rules`, or `.devin/rules` directory exists. Point it at a throwaway copy, not a repo you care about:
 

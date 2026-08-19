@@ -47,7 +47,7 @@ If a repo already uses one of these files, codedna updates only the block betwee
 Release tarballs contain the skill bundle, installer, docs, tests, and license:
 
 ```sh
-curl -L https://github.com/hannsxpeter/codedna/releases/download/v1.0.4/codedna-v1.0.4.tar.gz | tar xz
-cd codedna-1.0.4
+curl -L https://github.com/hannsxpeter/codedna/releases/download/v1.1.0/codedna-v1.1.0.tar.gz | tar xz
+cd codedna-1.1.0
 ./install.sh codex
 ```
