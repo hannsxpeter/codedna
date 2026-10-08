@@ -25,17 +25,31 @@ install_skill() {
 
   mkdir -p "$skill_dest/scripts"
   cp "$SRC_DIR/skill/SKILL.md" "$skill_dest/SKILL.md"
-  cp "$SRC_DIR/skill/scripts/codedna_stats.py" "$skill_dest/scripts/codedna_stats.py"
-  cp "$SRC_DIR/skill/scripts/codedna_wire.py" "$skill_dest/scripts/codedna_wire.py"
-  chmod +x "$skill_dest/scripts/codedna_stats.py"
-  chmod +x "$skill_dest/scripts/codedna_wire.py"
+  cp "$SRC_DIR"/skill/scripts/*.py "$skill_dest/scripts/"
+  chmod +x "$skill_dest"/scripts/*.py
 
-  if [ -n "$stale_file" ] && [ -f "$stale_file" ]; then
-    rm -f "$stale_file"
-    echo "Removed stale bare-file install at $stale_file"
+  if [ -n "$stale_file" ] && [ -f "$dest/$stale_file" ]; then
+    rm -f "$dest/$stale_file"
+    echo "Removed stale bare-file install at $dest/$stale_file"
   fi
 
   echo "Installed codedna v$VERSION for $label to $skill_dest"
+}
+
+install_claude() {
+  install_skill "Claude Code" "${CLAUDE_SKILLS_DIR:-$HOME/.claude/skills}" codedna.md
+}
+
+install_codex() {
+  install_skill "Codex" "${CODEX_SKILLS_DIR:-${CODEX_HOME:-$HOME/.codex}/skills}" codedna.md
+}
+
+install_cursor() {
+  install_skill "Cursor" "${CURSOR_SKILLS_DIR:-$HOME/.cursor/skills}" ""
+}
+
+install_windsurf() {
+  install_skill "Windsurf/Cascade" "${WINDSURF_SKILLS_DIR:-$HOME/.codeium/windsurf/skills}" ""
 }
 
 usage() {
@@ -55,30 +69,22 @@ case "$TARGET" in
     exit 0
     ;;
   all)
-    claude_dest="${CLAUDE_SKILLS_DIR:-$HOME/.claude/skills}"
-    codex_dest="${CODEX_SKILLS_DIR:-${CODEX_HOME:-$HOME/.codex}/skills}"
-    cursor_dest="${CURSOR_SKILLS_DIR:-$HOME/.cursor/skills}"
-    windsurf_dest="${WINDSURF_SKILLS_DIR:-$HOME/.codeium/windsurf/skills}"
-    install_skill "Claude Code" "$claude_dest" "$claude_dest/codedna.md"
-    install_skill "Codex" "$codex_dest" "$codex_dest/codedna.md"
-    install_skill "Cursor" "$cursor_dest" ""
-    install_skill "Windsurf/Cascade" "$windsurf_dest" ""
+    install_claude
+    install_codex
+    install_cursor
+    install_windsurf
     ;;
   claude)
-    claude_dest="${CLAUDE_SKILLS_DIR:-$HOME/.claude/skills}"
-    install_skill "Claude Code" "$claude_dest" "$claude_dest/codedna.md"
+    install_claude
     ;;
   codex)
-    codex_dest="${CODEX_SKILLS_DIR:-${CODEX_HOME:-$HOME/.codex}/skills}"
-    install_skill "Codex" "$codex_dest" "$codex_dest/codedna.md"
+    install_codex
     ;;
   cursor)
-    cursor_dest="${CURSOR_SKILLS_DIR:-$HOME/.cursor/skills}"
-    install_skill "Cursor" "$cursor_dest" ""
+    install_cursor
     ;;
   windsurf | cascade)
-    windsurf_dest="${WINDSURF_SKILLS_DIR:-$HOME/.codeium/windsurf/skills}"
-    install_skill "Windsurf/Cascade" "$windsurf_dest" ""
+    install_windsurf
     ;;
   *)
     usage

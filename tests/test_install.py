@@ -10,6 +10,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 SKILL = ROOT / "skill" / "SKILL.md"
 SUPPORT = ROOT / "docs" / "AGENT_SUPPORT.md"
+CHANGELOG = ROOT / "CHANGELOG.md"
 VERSION = re.search(r"^Version: (\S+)$", SKILL.read_text(encoding="utf-8"), re.M).group(1)
 SEMVER_RE = re.compile(r"\d+\.\d+\.\d+")
 
@@ -101,6 +102,16 @@ class InstallTests(unittest.TestCase):
             found.update(SEMVER_RE.findall(path.read_text(encoding="utf-8")))
 
         self.assertEqual({VERSION}, found)
+
+    def test_changelog_leads_with_the_skill_version(self):
+        text = CHANGELOG.read_text(encoding="utf-8")
+        latest = re.search(r"^## \[(\d+\.\d+\.\d+)\]", text, re.M).group(1)
+
+        self.assertEqual(VERSION, latest)
+        self.assertIn(
+            "[%s]: https://github.com/hannsxpeter/codedna/releases/tag/v%s" % (VERSION, VERSION),
+            text,
+        )
 
 
 if __name__ == "__main__":

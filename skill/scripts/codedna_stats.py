@@ -5,6 +5,7 @@ import argparse
 import json
 import os
 import re
+import subprocess
 from collections import Counter, defaultdict
 from statistics import median
 
@@ -35,6 +36,8 @@ EXT = {
     ".cjs": "js",
     ".ts": "ts",
     ".tsx": "ts",
+    ".mts": "ts",
+    ".cts": "ts",
     ".py": "py",
     ".go": "go",
     ".rs": "rs",
@@ -43,9 +46,13 @@ EXT = {
     ".php": "php",
     ".c": "c",
     ".cpp": "cpp",
+    ".cc": "cpp",
+    ".cxx": "cpp",
+    ".hpp": "cpp",
     ".cs": "cs",
     ".swift": "swift",
     ".kt": "kt",
+    ".kts": "kt",
 }
 
 HASH_COMMENT = {"py", "rb"}
@@ -60,6 +67,11 @@ CONTRACTION_RE = re.compile(
     re.I,
 )
 MESSAGE_LITERAL = r'(?:"((?:\\.|[^"\\\r\n])*)"|\'((?:\\.|[^\'\\\r\n])*)\'|`((?:\\.|[^`\\\r\n])*)`)'
+QUOTE_KINDS = {'"': "double", "'": "single", "`": "backtick"}
+REGEX_LITERAL = (
+    r"(?:(?<=[(,=:\[!&|?{};])|(?<=\breturn)|^)[ \t]*"
+    r"/(?![/*])(?:\\.|\[(?:\\.|[^\]\\\n])*\]|[^/\\\[\n])+/"
+)
 
 ERROR_PREFIXES = {
     "js": r"\b(?:new\s+)?(?:[A-Za-z_$][\w$]*Error|Error)\s*\(\s*",
@@ -89,16 +101,16 @@ PATS = {
             r"\b(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=\s*(?:async\s*)?function\b",
             r"\b(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=\s*(?:async\s*)?(?:\([^)]*\)|[A-Za-z_$][\w$]*)\s*=>",
         ],
-        "variable": [r"\b(?:const|let|var)\s+([A-Za-z_$][\w$]*)\b"],
         "type": [r"\b(?:interface|type)\s+([A-Za-z_$][\w$]*)"],
         "class": [r"\bclass\s+([A-Za-z_$][\w$]*)"],
         "constant": [r"\bconst\s+([A-Z_][A-Z0-9_]{2,})\b"],
+        "variable": [r"\b(?:const|let|var)\s+([A-Za-z_$][\w$]*)\b"],
     },
     "py": {
         "function": [r"^\s*(?:async\s+)?def\s+([A-Za-z_]\w*)"],
-        "variable": [r"^\s*([A-Za-z_]\w*)\s*="],
         "class": [r"^\s*class\s+([A-Za-z_]\w*)"],
         "constant": [r"^([A-Z_][A-Z0-9_]{2,})\s*="],
+        "variable": [r"^\s*([A-Za-z_]\w*)\s*="],
     },
     "go": {
         "function": [r"\bfunc\s+(?:\([^)]*\)\s*)?([A-Za-z_]\w*)"],
@@ -131,15 +143,53 @@ def case(name):
     return "PascalCase" if text[0].isupper() else "camelCase"
 
 
-def collect_files(target):
-    files = defaultdict(list)
+def walk_files(target):
     for root, dirs, names in os.walk(target):
         dirs[:] = [d for d in dirs if d not in IGNORE and not d.startswith(".")]
         for name in names:
-            lang = EXT.get(os.path.splitext(name)[1].lower())
-            if lang:
-                files[lang].append(os.path.join(root, name))
-    return files
+            yield os.path.join(root, name)
+
+
+def git_files(target):
+    try:
+        proc = subprocess.run(
+            ["git", "-C", str(target), "ls-files", "-z", "--cached", "--others", "--exclude-standard"],
+            capture_output=True,
+            check=True,
+        )
+    except (OSError, subprocess.CalledProcessError):
+        return []
+    paths = []
+    for raw in proc.stdout.split(b"\0"):
+        parts = os.fsdecode(raw).split("/")
+        if not raw or any(part in IGNORE or part.startswith(".") for part in parts[:-1]):
+            continue
+        path = os.path.join(target, *parts)
+        if parts[-1]:
+            paths.append(path)
+        else:
+            paths.extend(source_files(path))
+    return paths
+
+
+def source_files(target):
+    return git_files(target) or list(walk_files(target))
+
+
+def collect_files(target):
+    files = defaultdict(set)
+    for path in source_files(target):
+        lang = EXT.get(os.path.splitext(path)[1].lower())
+        if lang and os.path.isfile(path):
+            files[lang].add(path)
+    return {lang: sorted(paths) for lang, paths in files.items()}
+
+
+def sample_paths(paths):
+    if len(paths) <= MAX_FILES_PER_LANG:
+        return paths
+    step = len(paths) / MAX_FILES_PER_LANG
+    return [paths[int(index * step)] for index in range(MAX_FILES_PER_LANG)]
 
 
 def read_text(path):
@@ -227,14 +277,30 @@ def count_lines(lang, text):
     return code, comment, tabs, spaces
 
 
+def literal_pattern(lang):
+    if lang in HASH_COMMENT:
+        parts = [r"#[^\n]*"]
+    else:
+        parts = [r"//[^\n]*", r"(?<![\\\[])/\*[\s\S]*?\*/"]
+    if lang == "py":
+        parts += [r'"""[\s\S]*?"""', r"'''[\s\S]*?'''"]
+    parts += [r'"(?:[^"\\\n]|\\.)*"', r"'(?:[^'\\\n]|\\.)*'"]
+    if lang in {"js", "ts"}:
+        parts.append(r"`(?:[^`\\]|\\[\s\S])*`")
+        parts.append(REGEX_LITERAL)
+    return re.compile("|".join(parts), re.M)
+
+
 def count_quotes(lang, text):
     if lang not in QUOTE_LANGS:
         return Counter()
-    counts = Counter()
-    counts["double"] = len(re.findall(r'"(?:[^"\\]|\\.)*"', text))
-    counts["single"] = len(re.findall(r"'(?:[^'\\]|\\.)*'", text))
+    counts = Counter({"double": 0, "single": 0})
     if lang in {"js", "ts"}:
-        counts["backtick"] = len(re.findall(r"`(?:[^`\\]|\\.)*`", text, re.S))
+        counts["backtick"] = 0
+    for match in literal_pattern(lang).finditer(text):
+        literal = match.group()
+        if literal[:3] not in ('"""', "'''") and literal[0] in QUOTE_KINDS:
+            counts[QUOTE_KINDS[literal[0]]] += 1
     return counts
 
 
@@ -403,9 +469,13 @@ def add_file_case(naming, path):
 
 
 def add_identifier_cases(lang, text, naming, lengths, boolean_names):
+    claimed = set()
     for kind, patterns in PATS.get(lang, {}).items():
         for pattern in patterns:
             for match in re.finditer(pattern, text, re.M):
+                if match.start(1) in claimed:
+                    continue
+                claimed.add(match.start(1))
                 name = match.group(1)
                 naming[kind][case(name)] += 1
                 lengths[kind].append(len(name.strip("_")))
@@ -551,7 +621,7 @@ def analyze_language(lang, paths):
     comments = []
     messages = []
 
-    for path in paths[:MAX_FILES_PER_LANG]:
+    for path in sample_paths(paths):
         try:
             if os.path.getsize(path) > MAX_FILE_BYTES:
                 result["files_skipped_large"] += 1
@@ -635,7 +705,7 @@ def print_text(results, target):
             sample = "read %d of %d files" % (read, total)
         print("\n== %s (%s, %d code lines) ==" % (lang, sample, result["code_lines"]))
         if result["files_capped"]:
-            print("  sampled  : capped at %d files" % MAX_FILES_PER_LANG)
+            print("  sampled  : capped at %d files, spread evenly by path" % MAX_FILES_PER_LANG)
         if result["files_skipped_large"]:
             print("  skipped  : %d oversized files" % result["files_skipped_large"])
         if result["files_skipped_minified"]:
@@ -653,7 +723,7 @@ def print_text(results, target):
         )
 
         quotes = Counter(result["quotes"])
-        if quotes:
+        if sum(quotes.values()):
             parts = ["%s %d%%" % (name, pct(quotes, name)) for name in ["double", "single", "backtick"] if quotes.get(name)]
             print("  quotes   : " + " / ".join(parts))
         if result["function_lengths"]["count"]:

@@ -1,5 +1,6 @@
 import importlib.util
 import json
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -46,6 +47,136 @@ class StatsTests(unittest.TestCase):
         self.assertEqual(quotes["double"], 1)
         self.assertEqual(quotes["single"], 1)
         self.assertEqual(quotes["backtick"], 1)
+
+    def test_docstrings_are_not_counted_as_quote_style(self):
+        quotes = self.stats.count_quotes("py", '"""Module doc."""\nname = \'user\'\n')
+
+        self.assertEqual(dict(quotes), {"double": 0, "single": 1})
+
+    def test_apostrophes_do_not_pair_into_single_quoted_strings(self):
+        py = 'msg = "can\'t"\nother = "won\'t"\n'
+        js = "// don't\n// won't\nconst a = \"x\";\nconst b = 'y';\n"
+
+        self.assertEqual(dict(self.stats.count_quotes("py", py)), {"double": 2, "single": 0})
+        self.assertEqual(dict(self.stats.count_quotes("js", js)), {"double": 1, "single": 1, "backtick": 0})
+
+    def test_quotes_inside_comments_are_not_counted(self):
+        js = '// use "foo"\n/* or \'bar\' */\nconst a = 1;\n'
+        py = '# use "foo"\nvalue = 1  # or \'bar\'\n'
+
+        self.assertEqual(dict(self.stats.count_quotes("js", js)), {"double": 0, "single": 0, "backtick": 0})
+        self.assertEqual(dict(self.stats.count_quotes("py", py)), {"double": 0, "single": 0})
+
+    def test_regex_literals_do_not_hide_later_strings(self):
+        escaped = 'const a = url.replace(/\\/*$/, "");\nconst b = "x";\nconst c = "y";\n/** doc */\n'
+        backtick = 'const code = text.replace(/`[^`]+`/g, "");\nconst b = "x";\n'
+        division = 'const half = total / 2;\nconst rate = count / 4;\nconst b = "x";\n'
+
+        self.assertEqual(self.stats.count_quotes("js", escaped)["double"], 3)
+        self.assertEqual(dict(self.stats.count_quotes("ts", backtick)), {"double": 2, "single": 0, "backtick": 0})
+        self.assertEqual(self.stats.count_quotes("js", division)["double"], 1)
+
+    def test_template_literal_line_continuation(self):
+        js = 'const a = `first \\\nsecond`;\nconst b = "x";\n'
+
+        self.assertEqual(dict(self.stats.count_quotes("js", js)), {"double": 1, "single": 0, "backtick": 1})
+
+    def test_identifiers_are_counted_under_one_kind(self):
+        results = {item["language"]: item for item in self.stats.analyze(ROOT / "tests" / "fixtures" / "terse_js")}
+        js = results["js"]
+
+        self.assertEqual(js["naming"]["variable"], {"lower": 4, "camelCase": 1})
+        self.assertEqual(js["naming"]["constant"], {"SCREAMING_SNAKE": 1})
+        self.assertEqual(js["boolean_prefix_share"]["count"], 9)
+
+    def test_python_constants_are_not_also_variables(self):
+        results = {item["language"]: item for item in self.stats.analyze(ROOT / "tests" / "fixtures" / "chatty_py")}
+        naming = results["py"]["naming"]
+
+        self.assertEqual(naming["constant"], {"SCREAMING_SNAKE": 1})
+        self.assertNotIn("variable", naming)
+
+    def test_recognizes_additional_source_extensions(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            names = ["module.mts", "shared.cts", "engine.cc", "engine.cxx", "engine.hpp", "build.gradle.kts"]
+            for name in names:
+                (Path(tmp) / name).write_text("\n", encoding="utf-8")
+            files = self.stats.collect_files(tmp)
+
+        self.assertEqual({lang: len(paths) for lang, paths in files.items()}, {"ts": 2, "cpp": 3, "kt": 1})
+
+    def test_collected_files_are_sorted(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            for index in range(12):
+                (Path(tmp) / ("mod_%02d.py" % index)).write_text("\n", encoding="utf-8")
+            paths = self.stats.collect_files(tmp)["py"]
+
+        self.assertEqual(paths, sorted(paths))
+        self.assertEqual(len(paths), 12)
+
+    @unittest.skipUnless(shutil.which("git"), "git is not installed")
+    def test_git_ignored_files_are_skipped(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            subprocess.run(["git", "init", "-q", str(root)], check=True)
+            (root / ".gitignore").write_text("generated/\n", encoding="utf-8")
+            (root / "generated").mkdir()
+            (root / "generated" / "client.py").write_text("def x():\n    return 1\n", encoding="utf-8")
+            (root / "app.py").write_text("def load():\n    return 1\n", encoding="utf-8")
+            results = {item["language"]: item for item in self.stats.analyze(tmp)}
+
+        self.assertEqual(results["py"]["files_total"], 1)
+        self.assertEqual(results["py"]["naming"]["file"], {"lower": 1})
+
+    @unittest.skipUnless(shutil.which("git"), "git is not installed")
+    def test_git_listing_skips_vendored_hidden_and_deleted_files(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            subprocess.run(["git", "init", "-q", str(root)], check=True)
+            for rel in ["app.py", "vendor/dep.py", ".github/tool.py", "gone.py"]:
+                (root / rel).parent.mkdir(parents=True, exist_ok=True)
+                (root / rel).write_text("value = 1\n", encoding="utf-8")
+            subprocess.run(["git", "-C", str(root), "add", "-A"], check=True)
+            (root / "gone.py").unlink()
+            results = {item["language"]: item for item in self.stats.analyze(tmp)}
+
+        self.assertEqual(results["py"]["files_total"], 1)
+        self.assertEqual(results["py"]["read_errors"], 0)
+
+    @unittest.skipUnless(shutil.which("git"), "git is not installed")
+    def test_nested_repositories_are_measured(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            subprocess.run(["git", "init", "-q", str(root)], check=True)
+            for name in ["svc_a", "svc_b"]:
+                subprocess.run(["git", "init", "-q", str(root / name)], check=True)
+                (root / name / ".gitignore").write_text("build_out/\n", encoding="utf-8")
+                (root / name / "build_out").mkdir()
+                (root / name / "build_out" / "gen.py").write_text("value = 1\n", encoding="utf-8")
+                (root / name / "app.py").write_text("value = 1\n", encoding="utf-8")
+            results = {item["language"]: item for item in self.stats.analyze(tmp)}
+
+        self.assertEqual(results["py"]["files_total"], 2)
+
+    def test_without_git_the_walk_still_skips_vendored_directories(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "node_modules").mkdir()
+            (root / "node_modules" / "dep.js").write_text("const a = 1;\n", encoding="utf-8")
+            (root / "app.js").write_text("const b = 2;\n", encoding="utf-8")
+            files = self.stats.collect_files(tmp)
+
+        self.assertEqual([Path(path).name for path in files["js"]], ["app.js"])
+
+    def test_capped_samples_spread_across_the_tree(self):
+        original = self.stats.MAX_FILES_PER_LANG
+        self.stats.MAX_FILES_PER_LANG = 3
+        try:
+            sampled = self.stats.sample_paths(["a", "b", "c", "d", "e", "f"])
+        finally:
+            self.stats.MAX_FILES_PER_LANG = original
+
+        self.assertEqual(sampled, ["a", "c", "e"])
 
     def test_go_quote_output_is_suppressed(self):
         with tempfile.TemporaryDirectory() as tmp:
