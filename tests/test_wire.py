@@ -1,5 +1,6 @@
 import importlib.util
 import json
+import os
 import subprocess
 import sys
 import tempfile
@@ -90,6 +91,29 @@ class WireTests(unittest.TestCase):
             self.wire.wire(root)
 
             self.assertEqual(first, agents.read_bytes())
+
+    def test_rerun_reports_unchanged_and_skips_the_write(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            first = self.wire.wire(root, all_targets=True)
+            for item in first:
+                os.utime(item["path"], ns=(1, 1))
+
+            second = self.wire.wire(root, all_targets=True)
+
+            self.assertEqual({item["action"] for item in first}, {"created"})
+            self.assertEqual({item["action"] for item in second}, {"unchanged"})
+            for item in second:
+                self.assertEqual(Path(item["path"]).stat().st_mtime_ns, 1)
+
+    def test_changed_block_reports_updated(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "AGENTS.md").write_text("<!-- codedna:start -->\nold\n<!-- codedna:end -->\n", encoding="utf-8")
+
+            results = self.wire.wire(root)
+
+            self.assertEqual(results, [{"target": "agents", "path": str(root / "AGENTS.md"), "action": "updated"}])
 
     def test_preserves_indentation_after_the_block(self):
         with tempfile.TemporaryDirectory() as tmp:

@@ -13,7 +13,7 @@ codedna is a portable coding-agent skill. It studies a codebase the way you woul
 
 AI-written code is usually correct but recognizably foreign. It carries tells: a comment on every line, variable names two words longer than you would pick, a `try/catch` you never would have wrapped, a helper extracted where you inline, cheerful comment prose where you are terse. Individually small; together they read as "not written by the person whose name is on the rest of the repo."
 
-The reason most style guides miss this: formatters already enforce surface style. Indentation, quotes, and semicolons get rewritten the moment someone runs Prettier, Black, gofmt, or rustfmt. The fingerprint that actually distinguishes a person lives in the choices no formatter touches, what they name things, how much they comment and in what voice, how big their functions get, how defensively they handle errors, and the small idioms they reuse. codedna spends its attention there.
+The reason most style guides miss this: formatters already enforce surface style. Indentation, quotes, and semicolons get rewritten the moment someone runs Prettier, Black, gofmt, or rustfmt. The fingerprint that actually distinguishes a person lives in the choices no formatter touches: what they name things, how much they comment and in what voice, how big their functions get, how defensively they handle errors, and the small idioms they reuse. codedna spends its attention there.
 
 ## What it does
 
@@ -44,12 +44,13 @@ Or install it by hand for any `SKILL.md` host:
 ```sh
 mkdir -p <skills-dir>/codedna/scripts
 cp skill/SKILL.md <skills-dir>/codedna/SKILL.md
-cp skill/scripts/codedna_stats.py <skills-dir>/codedna/scripts/codedna_stats.py
-cp skill/scripts/codedna_wire.py <skills-dir>/codedna/scripts/codedna_wire.py
-chmod +x <skills-dir>/codedna/scripts/codedna_*.py
+cp skill/scripts/*.py <skills-dir>/codedna/scripts/
+chmod +x <skills-dir>/codedna/scripts/*.py
 ```
 
 Then restart the target coding agent. It triggers on phrases like "match my coding style", "capture the conventions", "make it look like I wrote it", or an explicit "codedna".
+
+The two bundled helpers need Python 3.9 or newer and use only the standard library. Without Python, the agent writes the wiring block by hand and builds the profile from configs and close reading alone.
 
 ## Agent support
 
@@ -86,27 +87,41 @@ Check code for tells before you commit:
 > check this diff against the codedna
 ```
 
-Optional pre-commit hook:
+Optional pre-commit hook. It prints the review and never blocks the commit:
 
 ```sh
 cat > .git/hooks/pre-commit <<'HOOK'
 #!/usr/bin/env sh
-# Replace agent-cli with your preferred coding agent command.
-agent-cli "check the staged diff against the codedna"
+# Claude Code shown. For Codex: codex exec "check the staged diff against the codedna"
+git diff --staged | claude -p "check this staged diff against the codedna" || true
 HOOK
 chmod +x .git/hooks/pre-commit
 ```
 
+### Running the helpers directly
+
+Both helpers also run on their own, which is useful for CI or for checking a profile's numbers:
+
+```sh
+python3 skill/scripts/codedna_stats.py /path/to/repo           # text report
+python3 skill/scripts/codedna_stats.py /path/to/repo --json    # every measurement
+python3 skill/scripts/codedna_wire.py /path/to/repo            # AGENTS.md plus instruction files the repo already has
+python3 skill/scripts/codedna_wire.py /path/to/repo --all      # every supported instruction file
+python3 skill/scripts/codedna_wire.py /path/to/repo --agent claude --agent cursor
+```
+
+The stats helper only reads. Inside a Git work tree it measures the files Git would track, so anything in `.gitignore` stays out, and it descends into nested repositories with their own ignore rules. Elsewhere, or when you point it at a directory Git ignores, it walks the tree. Either way it skips vendored, build, and hidden directories. The wiring helper writes files and reports each one as `created`, `updated`, or `unchanged`.
+
 ## What it captures
 
-- **Naming**, casing per identifier kind, verb dialect (`get` vs `fetch` vs `load`), abbreviations, boolean prefixes, file-name style.
-- **Comments and documentation**, density, the why-vs-what split, register (terse fragments vs full sentences), doc-comment norms.
-- **Human-facing prose by channel**, errors, validation, logs, test descriptions, CLI or UI text, and repository docs, without assuming they all use one voice.
-- **Structure**, function size, extraction threshold, file organization, paradigm.
-- **Control flow and error handling**, early returns vs nesting, async style, how defensive the code is.
-- **Types, imports, tests**, and the conventions that govern them.
-- **Idioms and vocabulary**, the reused helpers and domain words that make code recognizably one author's.
-- **AI tells**, the specific places the author is the opposite of the AI default, so contributions slip there most easily.
+- **Naming**: casing per identifier kind, verb dialect (`get` vs `fetch` vs `load`), abbreviations, boolean prefixes, file-name style.
+- **Comments and documentation**: density, the why-vs-what split, register (terse fragments vs full sentences), doc-comment norms.
+- **Human-facing prose by channel**: errors, validation, logs, test descriptions, CLI or UI text, and repository docs, without assuming they all use one voice.
+- **Structure**: function size, extraction threshold, file organization, paradigm.
+- **Control flow and error handling**: early returns vs nesting, async style, how defensive the code is.
+- **Types, imports, tests**: the conventions that govern them.
+- **Idioms and vocabulary**: the reused helpers and domain words that make code recognizably one author's.
+- **AI tells**: the specific places the author is the opposite of the AI default, so contributions slip there most easily.
 
 ## The generated profile
 

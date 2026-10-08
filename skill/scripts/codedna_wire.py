@@ -60,14 +60,14 @@ def replace_block(text, block=PLAIN_BLOCK, start_marker=START, end_marker=END):
 
 def write_target(path, body, prefix="", start_marker=START, end_marker=END):
     existed = path.exists()
-    path.parent.mkdir(parents=True, exist_ok=True)
     text = path.read_text(encoding="utf-8") if existed else ""
-    if not text.strip() and prefix:
-        updated = prefix + body
-    else:
+    if text.strip():
         updated = replace_block(text, body, start_marker, end_marker)
-        if not existed and prefix:
-            updated = prefix + updated
+    else:
+        updated = prefix + body
+    if updated == text:
+        return "unchanged"
+    path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(updated, encoding="utf-8")
     return "updated" if existed else "created"
 
@@ -82,11 +82,11 @@ def cascade_path(root):
 
 def target_path(root, target):
     if target in PLAIN_TARGETS:
-        return root / PLAIN_TARGETS[target], "", PLAIN_BLOCK
+        return root / PLAIN_TARGETS[target], ""
     if target == "cursor":
-        return root / ".cursor/rules/codedna.mdc", CURSOR_FRONTMATTER, PLAIN_BLOCK
+        return root / ".cursor/rules/codedna.mdc", CURSOR_FRONTMATTER
     if target == "cascade":
-        return cascade_path(root), CASCADE_FRONTMATTER, PLAIN_BLOCK
+        return cascade_path(root), CASCADE_FRONTMATTER
     raise ValueError("unknown target: %s" % target)
 
 
@@ -104,15 +104,11 @@ def existing_targets(root):
 
 def wire(root, targets=None, all_targets=False):
     root = Path(root)
-    selected = list(ALL_TARGETS if all_targets else (targets or existing_targets(root)))
-    seen = set()
+    selected = ALL_TARGETS if all_targets else (targets or existing_targets(root))
     results = []
-    for target in selected:
-        if target in seen:
-            continue
-        seen.add(target)
-        path, prefix, body = target_path(root, target)
-        action = write_target(path, body, prefix, START, END)
+    for target in dict.fromkeys(selected):
+        path, prefix = target_path(root, target)
+        action = write_target(path, PLAIN_BLOCK, prefix, START, END)
         results.append({"target": target, "path": str(path), "action": action})
     return results
 

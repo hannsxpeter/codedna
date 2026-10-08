@@ -2,6 +2,36 @@
 
 All notable changes to codedna are documented in this file. The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.1] - 2026-10-08
+
+Accuracy and maintenance release. Three measurement fixes change reported numbers, so profiles generated with 1.1.0 may report different quote shares, variable counts, and boolean-prefix shares after upgrading. The stats JSON keeps its shape, and the wiring helper gains an `unchanged` action.
+
+### Fixed
+
+- Stop counting Python docstrings toward quote style. Each `"""..."""` was read as three double-quoted strings, so docstring-heavy code looked more double-quoted than it was. Triple-quoted strings are now left out of the quote measurement.
+- Stop apostrophes from pairing into phantom single-quoted strings. An apostrophe in a comment or inside a double-quoted string (`"can't"`) paired with the next `'` in the file, even lines later. Quotes are now read in one left-to-right scan that skips comments and JS or TS regex literals and never lets a single- or double-quoted string cross a line. Template literals still span lines, including after a trailing backslash.
+- Count each identifier under one kind. JS arrow functions and `const` constants were also counted as variables, as were Python module constants, which inflated the variable histogram and counted the same name twice in the boolean-prefix share. On the `terse_js` fixture the variable count drops from 9 to 5.
+- Honor `.gitignore` in the stats helper. `skill/SKILL.md` told agents to skip ignored files, but the helper walked every directory not on its hard-coded list. Inside a Git work tree it now measures the files `git ls-files` reports, tracked or untracked but not ignored, and falls back to the directory walk elsewhere or when the target itself is ignored. Nested repositories are measured under their own ignore rules; Git submodules are left out, like other vendored code. File names that are not valid UTF-8 are kept.
+
+### Changed
+
+- Spread a capped language sample evenly across sorted paths instead of taking the first 800 files in filesystem order, which favored whichever directory the walk reached first.
+- Recognize `.mts`, `.cts`, `.cc`, `.cxx`, `.hpp`, and `.kts` files.
+- Omit the `quotes` line from the text report when no quoted strings were counted, instead of printing it empty.
+- Report `unchanged` from the wiring helper when a file already holds the current block, and skip the write so the file is not touched. Created and updated files are byte-identical to 1.1.0.
+- Simplify `write_target`, `target_path`, and target de-duplication in the wiring helper.
+- Resolve each install target once in `install.sh` and copy every helper under `skill/scripts/` by glob, so a new helper cannot be left out of the install.
+- Tell agents in `skill/SKILL.md` what to do when Python is unavailable: skip measurement, profile from configs and close reading, and say so in the report.
+- Run CI on Python 3.9, the `python3` that ships with macOS, and on the latest Python 3. Move to `actions/checkout@v7` and `actions/setup-python@v7`, run on pushes to `main`, tags, and pull requests instead of every push, use a read-only token, and use the runner's preinstalled ShellCheck.
+- Document the Python requirement in the README, add a section on running the helpers directly, replace the placeholder pre-commit command with working Claude Code and Codex examples that pipe in the staged diff, and fix list labels that read as run-on sentences.
+- Add a release checklist and the Python 3.9 floor to `CONTRIBUTING.md`, and list the `--agent` target names in `docs/AGENT_SUPPORT.md`.
+
+### Added
+
+- Extend the docs link test to `skill/SKILL.md` and check `#anchor` links against real headings, ignoring fenced code.
+- Add a test that the top `CHANGELOG.md` entry and its link reference match the version in `skill/SKILL.md`.
+- Add regression tests for every fix above, each checked to fail when its fix is reverted. The suite is 60 tests.
+
 ## [1.1.0] - 2026-08-19
 
 Prose-voice release. CodeDNA now profiles the words inside a repository as part of its fingerprint, while keeping repository evidence stronger than generic writing rules. The stats JSON gains two additive objects per language: `comment_voice` and `error_message_voice`.
@@ -124,6 +154,7 @@ Initial release.
 - **Profile template**: a fixed `CODEDNA.md` structure that enforces specificity and pairs every convention with a real snippet.
 - Packaged as a single self-contained file, `codedna.md`, plus an `install.sh` for one-command installation.
 
+[1.1.1]: https://github.com/hannsxpeter/codedna/releases/tag/v1.1.1
 [1.1.0]: https://github.com/hannsxpeter/codedna/releases/tag/v1.1.0
 [1.0.4]: https://github.com/hannsxpeter/codedna/releases/tag/v1.0.4
 [1.0.3]: https://github.com/hannsxpeter/codedna/releases/tag/v1.0.3
