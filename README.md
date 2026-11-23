@@ -7,11 +7,9 @@
 
 ![codedna hero](assets/hero.svg)
 
-### Does this diff sound like you wrote it?
+**Fingerprint a codebase so AI contributions match the author.**
 
-**codedna fingerprints a codebase so AI contributions match the author.**
-
-It studies naming, comments, errors, docs, structure, and idioms the way you would study a writer's voice, writes the conventions into `CODEDNA.md`, and uses that profile so future work blends in. Formatters already own quotes and indent. codedna spends its attention on the fingerprint they cannot touch.
+Writes `CODEDNA.md` from the habits formatters cannot touch: naming, comments, errors, structure, idioms. Then Match and Check use that profile so new work blends in.
 
 ## Quest map
 

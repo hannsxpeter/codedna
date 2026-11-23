@@ -1,7 +1,7 @@
 {
   "name": "@hxp-tools/codedna",
   "version": "1.2.0",
-  "description": "Fingerprint a codebase's coding and prose style so AI contributions match the author. Stdlib-only Python skill for Claude Code, Codex, Cursor, and Windsurf.",
+  "description": "Fingerprint a codebase so AI contributions match the author.",
   "bin": {
     "codedna": "bin/codedna.js"
   },
