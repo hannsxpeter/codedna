@@ -7,52 +7,52 @@
   </style>
   <defs>
     <marker id="arrow" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
-      <path d="M0,0 L6,3 L0,6 Z" fill="#6BB8F2"/>
+      <path d="M0,0 L6,3 L0,6 Z" fill="#F2F65A"/>
     </marker>
   </defs>
   <rect x="0.5" y="0.5" width="1199" height="419" rx="10" fill="#1B1916" stroke="#34312B"/>
   <path d="M1 44H1199V11a10 10 0 0 0-10-10H11A10 10 0 0 0 1 11Z" fill="#23211D"/>
   <line x1="1" y1="44" x2="1199" y2="44" stroke="#34312B"/>
-  <text x="32" y="28" class="mono" font-size="13" font-weight="700" fill="#6BB8F2" letter-spacing="1.5">FINGERPRINT ENGINE</text>
+  <text x="32" y="28" class="mono" font-size="13" font-weight="700" fill="#F2F65A" letter-spacing="1.5">FINGERPRINT ENGINE</text>
   <text x="1168" y="28" class="mono" font-size="13" fill="#A5A397" text-anchor="end">SIGNALS IN, PROFILE OUT</text>
 
   <g transform="translate(48 90)">
     <rect width="220" height="260" rx="4" fill="#23211D" stroke="#34312B"/>
     <text x="20" y="36" class="mono" font-size="12" font-weight="700" fill="#A5A397" letter-spacing="1.5">INPUT</text>
     <text x="20" y="72" class="sans" font-size="22" font-weight="700" fill="#EDEDE6">Repo signals</text>
-    <text x="20" y="110" class="mono" font-size="14" fill="#6BB8F2">configs</text>
-    <text x="20" y="136" class="mono" font-size="14" fill="#6BB8F2">stats histograms</text>
-    <text x="20" y="162" class="mono" font-size="14" fill="#6BB8F2">comment voice</text>
-    <text x="20" y="188" class="mono" font-size="14" fill="#6BB8F2">error strings</text>
+    <text x="20" y="110" class="mono" font-size="14" fill="#F2F65A">configs</text>
+    <text x="20" y="136" class="mono" font-size="14" fill="#F2F65A">stats histograms</text>
+    <text x="20" y="162" class="mono" font-size="14" fill="#F2F65A">comment voice</text>
+    <text x="20" y="188" class="mono" font-size="14" fill="#F2F65A">error strings</text>
     <text x="20" y="230" class="sans" font-size="13" fill="#A5A397">Plus close reading of</text>
     <text x="20" y="250" class="sans" font-size="13" fill="#A5A397">representative files</text>
   </g>
 
-  <path d="M286 220H360" stroke="#6BB8F2" stroke-width="2" marker-end="url(#arrow)"/>
+  <path d="M286 220H360" stroke="#F2F65A" stroke-width="2" marker-end="url(#arrow)"/>
 
   <g transform="translate(372 90)">
-    <rect width="280" height="260" rx="4" fill="#23211D" stroke="#6BB8F2"/>
+    <rect width="280" height="260" rx="4" fill="#23211D" stroke="#F2F65A"/>
     <text x="20" y="36" class="mono" font-size="12" font-weight="700" fill="#A5A397" letter-spacing="1.5">ENGINE</text>
     <text x="20" y="72" class="sans" font-size="22" font-weight="700" fill="#EDEDE6">Map mode</text>
     <text x="20" y="110" class="sans" font-size="14" fill="#A5A397">Enforced vs observed.</text>
     <text x="20" y="136" class="sans" font-size="14" fill="#A5A397">Specific, not generic.</text>
     <text x="20" y="162" class="sans" font-size="14" fill="#A5A397">Snippet per convention.</text>
     <line x1="20" y1="186" x2="260" y2="186" stroke="#34312B"/>
-    <text x="20" y="218" class="mono" font-size="14" font-weight="700" fill="#6BB8F2">CODEDNA.md</text>
+    <text x="20" y="218" class="mono" font-size="14" font-weight="700" fill="#F2F65A">CODEDNA.md</text>
     <text x="20" y="246" class="sans" font-size="13" fill="#A5A397">Plus agent wiring</text>
   </g>
 
-  <path d="M670 220H744" stroke="#6BB8F2" stroke-width="2" marker-end="url(#arrow)"/>
+  <path d="M670 220H744" stroke="#F2F65A" stroke-width="2" marker-end="url(#arrow)"/>
 
   <g transform="translate(756 90)">
     <rect width="396" height="260" rx="4" fill="#23211D" stroke="#34312B"/>
     <text x="20" y="36" class="mono" font-size="12" font-weight="700" fill="#A5A397" letter-spacing="1.5">OUTPUT</text>
     <text x="20" y="72" class="sans" font-size="22" font-weight="700" fill="#EDEDE6">Three playable modes</text>
-    <text x="20" y="118" class="mono" font-size="15" font-weight="700" fill="#6BB8F2">MAP</text>
+    <text x="20" y="118" class="mono" font-size="15" font-weight="700" fill="#F2F65A">MAP</text>
     <text x="110" y="118" class="sans" font-size="15" fill="#EDEDE6">Write the fingerprint</text>
-    <text x="20" y="156" class="mono" font-size="15" font-weight="700" fill="#6BB8F2">MATCH</text>
+    <text x="20" y="156" class="mono" font-size="15" font-weight="700" fill="#F2F65A">MATCH</text>
     <text x="110" y="156" class="sans" font-size="15" fill="#EDEDE6">Contribute in house style</text>
-    <text x="20" y="194" class="mono" font-size="15" font-weight="700" fill="#6BB8F2">CHECK</text>
+    <text x="20" y="194" class="mono" font-size="15" font-weight="700" fill="#F2F65A">CHECK</text>
     <text x="110" y="194" class="sans" font-size="15" fill="#EDEDE6">Flag foreign tells</text>
     <line x1="20" y1="218" x2="376" y2="218" stroke="#34312B"/>
     <text x="20" y="248" class="sans" font-size="13" fill="#A5A397">Formatters already own quotes and indent. This owns the rest.</text>

@@ -8,12 +8,12 @@
   <rect x="0.5" y="0.5" width="1199" height="419" rx="10" fill="#1B1916" stroke="#34312B"/>
   <path d="M1 44H1199V11a10 10 0 0 0-10-10H11A10 10 0 0 0 1 11Z" fill="#23211D"/>
   <line x1="1" y1="44" x2="1199" y2="44" stroke="#34312B"/>
-  <text x="32" y="28" class="mono" font-size="13" font-weight="700" fill="#6BB8F2" letter-spacing="1.5">CODEDNA 1.2.0</text>
+  <text x="32" y="28" class="mono" font-size="13" font-weight="700" fill="#F2F65A" letter-spacing="1.5">CODEDNA 1.2.0</text>
   <text x="600" y="28" class="mono" font-size="13" fill="#A5A397" text-anchor="middle">@hxp-tools/codedna</text>
   <text x="1168" y="28" class="mono" font-size="13" fill="#A5A397" text-anchor="end">PRESS START  map the style</text>
 
   <text x="52" y="188" class="sans" font-size="118" font-weight="800" fill="#EDEDE6" letter-spacing="-4">codedna</text>
-  <rect x="52" y="208" width="56" height="6" fill="#6BB8F2"/>
+  <rect x="52" y="208" width="56" height="6" fill="#F2F65A"/>
   <text x="52" y="258" class="sans" font-size="28" font-weight="600" fill="#EDEDE6">Fingerprint a codebase so AI</text>
   <text x="52" y="296" class="sans" font-size="28" font-weight="600" fill="#EDEDE6">contributions match the author.</text>
   <text x="52" y="334" class="sans" font-size="17" fill="#A5A397">Map. Match. Check. Portable skill for Claude, Codex, Cursor, Windsurf.</text>
@@ -29,7 +29,7 @@
       <text x="20" y="212">AI tells catalogued</text>
       <text x="20" y="256">Formatter noise</text>
     </g>
-    <g class="mono" font-size="22" font-weight="700" fill="#6BB8F2" text-anchor="end">
+    <g class="mono" font-size="22" font-weight="700" fill="#F2F65A" text-anchor="end">
       <text x="372" y="80">3</text>
       <text x="372" y="124">2</text>
       <text x="372" y="168">4</text>
