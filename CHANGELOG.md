@@ -2,6 +2,15 @@
 
 All notable changes to codedna are documented in this file. The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.1] - 2026-11-23
+
+Patch release. Shortens the product about copy on GitHub, npm, and the README lead.
+
+### Changed
+
+- Simplify the one-line product description.
+- Point install docs at the `v1.2.1` release tarball.
+
 ## [1.2.0] - 2026-11-23
 
 Product release. codedna ships as an npm package under `@hxp-tools/codedna`, with a gamified README and SVG product graphics. Install paths and skill behavior are unchanged.
@@ -169,6 +178,7 @@ Initial release.
 - **Profile template**: a fixed `CODEDNA.md` structure that enforces specificity and pairs every convention with a real snippet.
 - Packaged as a single self-contained file, `codedna.md`, plus an `install.sh` for one-command installation.
 
+[1.2.1]: https://github.com/hannsxpeter/codedna/releases/tag/v1.2.1
 [1.2.0]: https://github.com/hannsxpeter/codedna/releases/tag/v1.2.0
 [1.1.1]: https://github.com/hannsxpeter/codedna/releases/tag/v1.1.1
 [1.1.0]: https://github.com/hannsxpeter/codedna/releases/tag/v1.1.0

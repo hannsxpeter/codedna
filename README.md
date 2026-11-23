@@ -73,8 +73,8 @@ Python 3.9+ is required for the helpers. Without Python, the agent still profile
 Release tarball:
 
 ```sh
-curl -L https://github.com/hannsxpeter/codedna/releases/download/v1.2.0/codedna-v1.2.0.tar.gz | tar xz
-cd codedna-1.2.0
+curl -L https://github.com/hannsxpeter/codedna/releases/download/v1.2.1/codedna-v1.2.1.tar.gz | tar xz
+cd codedna-1.2.1
 ./install.sh codex
 ```
 

@@ -1,6 +1,6 @@
 {
   "name": "@hxp-tools/codedna",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "description": "Fingerprint a codebase so AI contributions match the author.",
   "bin": {
     "codedna": "bin/codedna.js"
