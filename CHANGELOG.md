@@ -2,6 +2,21 @@
 
 All notable changes to codedna are documented in this file. The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.0] - 2026-11-23
+
+Product release. codedna ships as an npm package under `@hxp-tools/codedna`, with a gamified README and SVG product graphics. Install paths and skill behavior are unchanged.
+
+### Added
+
+- Publish `@hxp-tools/codedna` with an `npx` installer that wraps `install.sh`.
+- Add product graphics under `assets/`: hero, quest map, fingerprint engine, and achievements.
+- Rewrite the README as a product surface: quest map, status board, achievements, and a one-command start path.
+
+### Changed
+
+- Point install docs at the npm package and the `v1.2.0` release tarball.
+- Slim agent-support docs so install paths live in one place instead of drifting across the README.
+
 ## [1.1.1] - 2026-10-08
 
 Accuracy and maintenance release. Three measurement fixes change reported numbers, so profiles generated with 1.1.0 may report different quote shares, variable counts, and boolean-prefix shares after upgrading. The stats JSON keeps its shape, and the wiring helper gains an `unchanged` action.
@@ -154,6 +169,7 @@ Initial release.
 - **Profile template**: a fixed `CODEDNA.md` structure that enforces specificity and pairs every convention with a real snippet.
 - Packaged as a single self-contained file, `codedna.md`, plus an `install.sh` for one-command installation.
 
+[1.2.0]: https://github.com/hannsxpeter/codedna/releases/tag/v1.2.0
 [1.1.1]: https://github.com/hannsxpeter/codedna/releases/tag/v1.1.1
 [1.1.0]: https://github.com/hannsxpeter/codedna/releases/tag/v1.1.0
 [1.0.4]: https://github.com/hannsxpeter/codedna/releases/tag/v1.0.4

@@ -1,0 +1,52 @@
+{
+  "name": "@hxp-tools/codedna",
+  "version": "1.2.0",
+  "description": "Fingerprint a codebase's coding and prose style so AI contributions match the author. Stdlib-only Python skill for Claude Code, Codex, Cursor, and Windsurf.",
+  "bin": {
+    "codedna": "bin/codedna.js"
+  },
+  "scripts": {
+    "start": "node bin/codedna.js",
+    "test": "python3 -m unittest discover -s tests",
+    "pack:check": "npm pack --dry-run",
+    "release:check": "npm test && npm run pack:check",
+    "prepublishOnly": "npm run release:check"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "keywords": [
+    "code-style",
+    "ai",
+    "ai-agents",
+    "claude-code",
+    "codex",
+    "cursor",
+    "agent-skills",
+    "developer-tools",
+    "codedna",
+    "style-guide"
+  ],
+  "author": "hannsxpeter",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/hannsxpeter/codedna.git"
+  },
+  "homepage": "https://github.com/hannsxpeter/codedna#readme",
+  "bugs": {
+    "url": "https://github.com/hannsxpeter/codedna/issues"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "files": [
+    "bin/",
+    "skill/",
+    "install.sh",
+    "assets/",
+    "README.md",
+    "LICENSE",
+    "CHANGELOG.md"
+  ]
+}

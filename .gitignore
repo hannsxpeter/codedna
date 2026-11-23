@@ -11,3 +11,8 @@ __pycache__/
 # Editor and OS noise
 *.swp
 Thumbs.db
+
+# npm
+node_modules/
+*.tgz
+.npmrc

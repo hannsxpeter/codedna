@@ -1,131 +1,90 @@
 # codedna
 
-> Fingerprint a codebase's code and repository prose so AI-written contributions match the author's own.
-
 [![CI](https://github.com/hannsxpeter/codedna/actions/workflows/ci.yml/badge.svg)](https://github.com/hannsxpeter/codedna/actions/workflows/ci.yml)
 [![Release](https://img.shields.io/github/v/release/hannsxpeter/codedna?sort=semver)](https://github.com/hannsxpeter/codedna/releases)
+[![npm](https://img.shields.io/npm/v/@hxp-tools/codedna.svg)](https://www.npmjs.com/package/@hxp-tools/codedna)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Agent skill](https://img.shields.io/badge/coding%20agents-skill-8A2BE2)](https://agents.md)
 
-codedna is a portable coding-agent skill. It studies a codebase the way you would study a writer's voice, writes the conventions down in a profile, and uses that profile so future contributions read as if the original author wrote them. The profile covers code and the prose inside a repository: comments, docs, errors, logs, test descriptions, and CLI or UI text.
+![codedna hero](assets/hero.svg)
 
-## The problem
+### Does this diff sound like you wrote it?
 
-AI-written code is usually correct but recognizably foreign. It carries tells: a comment on every line, variable names two words longer than you would pick, a `try/catch` you never would have wrapped, a helper extracted where you inline, cheerful comment prose where you are terse. Individually small; together they read as "not written by the person whose name is on the rest of the repo."
+**codedna fingerprints a codebase so AI contributions match the author.**
 
-The reason most style guides miss this: formatters already enforce surface style. Indentation, quotes, and semicolons get rewritten the moment someone runs Prettier, Black, gofmt, or rustfmt. The fingerprint that actually distinguishes a person lives in the choices no formatter touches: what they name things, how much they comment and in what voice, how big their functions get, how defensively they handle errors, and the small idioms they reuse. codedna spends its attention there.
+It studies naming, comments, errors, docs, structure, and idioms the way you would study a writer's voice, writes the conventions into `CODEDNA.md`, and uses that profile so future work blends in. Formatters already own quotes and indent. codedna spends its attention on the fingerprint they cannot touch.
 
-## What it does
+## Quest map
 
-Three modes, one profile:
+![quest map](assets/quest-map.svg)
 
-| Mode | What it does | Say something like |
-| --- | --- | --- |
-| **Map** | Scan a codebase and write `CODEDNA.md`, the style profile. | "build the codedna for this repo" |
-| **Match** | Write new code that follows the profile so it blends in. | "add this in the style of the repo" |
-| **Check** | Review code, docs, a diff, or pasted text against the profile and report the tells. | "does this look AI-generated?" |
+| Level | Mode | Clear it with | Reward |
+| --- | --- | --- | --- |
+| **01** | **Map** | "build the codedna for this repo" | `CODEDNA.md` + agent wiring |
+| **02** | **Match** | "add this in the style of the repo" | Contributions that blend in |
+| **03** | **Check** | "check this against the codedna" | Named tells before they ship |
 
-Map also wires idempotent pointers into agent instruction files, so the profile loads automatically in the tools your repo uses and actually gets used.
+If a repo has no profile yet, Map runs first. Match and Check refuse to invent a style.
 
-## Install
+## Fingerprint engine
 
-codedna installs as a standard `SKILL.md` directory for supported skill-capable agents:
+![fingerprint engine](assets/fingerprint-engine.svg)
+
+1. **Configs** settle what tooling already enforces (Prettier, ruff, gofmt, and friends).
+2. **Stats** ground the profile in real frequencies: naming casing, comment density, voice, error punctuation.
+3. **Close reading** captures the habits numbers miss: verb dialect, extraction threshold, channel-specific prose.
+
+Every convention in the profile is specific enough that it would read differently for a different codebase. Generic lines get sharpened or cut.
+
+## Achievements
+
+![achievements](assets/achievements.svg)
+
+| Unlock | How you earn it |
+| --- | --- |
+| Profile Built | `CODEDNA.md` exists and is specific |
+| Voice Captured | Comment register and density recorded |
+| Tells Catalogued | House-specific AI tells listed |
+| Diff Clean | Check finds nothing foreign |
+| Wired In | `AGENTS.md` (or peer file) points at the profile |
+| Stats Grounded | Histograms from the real corpus |
+| Prose Matched | Errors, docs, and logs treated as channels |
+| Formatter Ignored | Profile covers only unenforced habits |
+
+## Press start
+
+```sh
+npx @hxp-tools/codedna@latest
+```
+
+Or pick a target: `npx @hxp-tools/codedna@latest cursor` (also `claude`, `codex`, `windsurf`, or `all`).
+
+From source:
 
 ```sh
 git clone https://github.com/hannsxpeter/codedna.git
 cd codedna
+./install.sh cursor   # or: all | claude | codex | windsurf
+```
+
+Restart the agent, then ask:
+
+> build the codedna for this repo
+
+Python 3.9+ is required for the helpers. Without Python, the agent still profiles from configs and close reading, and says so in the report.
+
+Release tarball:
+
+```sh
+curl -L https://github.com/hannsxpeter/codedna/releases/download/v1.2.0/codedna-v1.2.0.tar.gz | tar xz
+cd codedna-1.2.0
 ./install.sh codex
 ```
 
-Choose the target you use: `./install.sh claude`, `./install.sh codex`, `./install.sh cursor`, or `./install.sh windsurf`. To install into every supported skill host deliberately, run `./install.sh all`.
+Install paths and wiring details: [docs/AGENT_SUPPORT.md](docs/AGENT_SUPPORT.md).
 
-Or install it by hand for any `SKILL.md` host:
+## What a first Map looks like
 
-```sh
-mkdir -p <skills-dir>/codedna/scripts
-cp skill/SKILL.md <skills-dir>/codedna/SKILL.md
-cp skill/scripts/*.py <skills-dir>/codedna/scripts/
-chmod +x <skills-dir>/codedna/scripts/*.py
-```
-
-Then restart the target coding agent. It triggers on phrases like "match my coding style", "capture the conventions", "make it look like I wrote it", or an explicit "codedna".
-
-The two bundled helpers need Python 3.9 or newer and use only the standard library. Without Python, the agent writes the wiring block by hand and builds the profile from configs and close reading alone.
-
-## Agent support
-
-| Agent | How codedna integrates |
-| --- | --- |
-| Claude Code | Global skill install plus `CLAUDE.md` project wiring. |
-| Codex | Global skill install plus `AGENTS.md` project wiring. |
-| Gemini CLI | `GEMINI.md` project wiring. |
-| GitHub Copilot | `.github/copilot-instructions.md` project wiring. |
-| Cursor | Global skill install plus `AGENTS.md` or `.cursor/rules/codedna.mdc` project wiring. |
-| Windsurf/Cascade | Global skill install plus `AGENTS.md`, `.devin/rules/`, or `.windsurf/rules/` project wiring. |
-
-See [docs/AGENT_SUPPORT.md](docs/AGENT_SUPPORT.md) for install paths, overrides, and release package install.
-
-## Usage
-
-Map a repository:
-
-```
-> build the codedna for this repo
-```
-
-codedna reads the linter and formatter configs as ground truth, runs a bundled stdlib-only stats pass for grounded frequencies (naming casing, comment density, indentation, quotes, comment voice, and error-message style), close-reads a representative sample for code and prose voice, then writes `CODEDNA.md` and points the repo's agent instruction files at it.
-
-Write code that blends in:
-
-```
-> add a delete endpoint, in the style of the rest of the repo
-```
-
-Check code for tells before you commit:
-
-```
-> check this diff against the codedna
-```
-
-Optional pre-commit hook. It prints the review and never blocks the commit:
-
-```sh
-cat > .git/hooks/pre-commit <<'HOOK'
-#!/usr/bin/env sh
-# Claude Code shown. For Codex: codex exec "check the staged diff against the codedna"
-git diff --staged | claude -p "check this staged diff against the codedna" || true
-HOOK
-chmod +x .git/hooks/pre-commit
-```
-
-### Running the helpers directly
-
-Both helpers also run on their own, which is useful for CI or for checking a profile's numbers:
-
-```sh
-python3 skill/scripts/codedna_stats.py /path/to/repo           # text report
-python3 skill/scripts/codedna_stats.py /path/to/repo --json    # every measurement
-python3 skill/scripts/codedna_wire.py /path/to/repo            # AGENTS.md plus instruction files the repo already has
-python3 skill/scripts/codedna_wire.py /path/to/repo --all      # every supported instruction file
-python3 skill/scripts/codedna_wire.py /path/to/repo --agent claude --agent cursor
-```
-
-The stats helper only reads. Inside a Git work tree it measures the files Git would track, so anything in `.gitignore` stays out, and it descends into nested repositories with their own ignore rules. Elsewhere, or when you point it at a directory Git ignores, it walks the tree. Either way it skips vendored, build, and hidden directories. The wiring helper writes files and reports each one as `created`, `updated`, or `unchanged`.
-
-## What it captures
-
-- **Naming**: casing per identifier kind, verb dialect (`get` vs `fetch` vs `load`), abbreviations, boolean prefixes, file-name style.
-- **Comments and documentation**: density, the why-vs-what split, register (terse fragments vs full sentences), doc-comment norms.
-- **Human-facing prose by channel**: errors, validation, logs, test descriptions, CLI or UI text, and repository docs, without assuming they all use one voice.
-- **Structure**: function size, extraction threshold, file organization, paradigm.
-- **Control flow and error handling**: early returns vs nesting, async style, how defensive the code is.
-- **Types, imports, tests**: the conventions that govern them.
-- **Idioms and vocabulary**: the reused helpers and domain words that make code recognizably one author's.
-- **AI tells**: the specific places the author is the opposite of the AI default, so contributions slip there most easily.
-
-## The generated profile
-
-`CODEDNA.md` is human-readable and specific. A TL;DR section looks like this:
+codedna reads linter and formatter configs, runs a stdlib-only stats pass, close-reads a representative sample, then writes a profile whose TL;DR looks like this:
 
 ```markdown
 ## TL;DR
@@ -136,23 +95,42 @@ The stats helper only reads. Inside a Git work tree it measures the files Git wo
 5. Comments are short sentence fragments; error strings are lowercase and omit terminal punctuation.
 ```
 
-Every line is concrete enough that it would read differently for a different codebase. The skill enforces that discipline: if a convention would be true of almost any repo, it gets sharpened or cut.
+Then it points the repo's agent instruction files at that profile so Match and Check actually load it.
 
-The profile records positive voice cues as well as things to avoid. A terse fragment, a recurring error verb, or direct second-person documentation can be part of the fingerprint. Generic prose checks for filler, puffery, vague attribution, canned chatbot language, forced rhetorical structure, and abstract jargon apply only when repository evidence is silent. Local examples always win.
+## Running the helpers directly
 
-## How it works
+```sh
+python3 skill/scripts/codedna_stats.py /path/to/repo
+python3 skill/scripts/codedna_stats.py /path/to/repo --json
+python3 skill/scripts/codedna_wire.py /path/to/repo
+python3 skill/scripts/codedna_wire.py /path/to/repo --all
+```
 
-codedna analyzes in layers, cheapest and most authoritative first:
+The stats helper only reads. Inside a Git work tree it measures files Git would track. The wiring helper reports each file as `created`, `updated`, or `unchanged`.
 
-1. **Config files** (`.editorconfig`, Prettier, ESLint, `pyproject.toml`, `rustfmt.toml`, and friends) are enforced, so they settle whole categories up front and are recorded as such.
-2. **Bundled stdlib-only helpers** ground the profile in real frequencies, including comment length, sentence style, person and contraction use, and literal error-message capitalization and punctuation. The measurements describe the corpus; they are not lint rules.
-3. **Close reading** of a representative sample captures channel-specific voice and the positive habits that numbers cannot.
+Optional pre-commit hook (prints a review, never blocks):
 
-The skill entrypoint lives at `skill/SKILL.md`, with executable helpers kept as files beside it so they can be run and tested directly. Agents without a global skill mechanism still benefit from the generated `CODEDNA.md` and repo-level instruction files.
+```sh
+cat > .git/hooks/pre-commit <<'HOOK'
+#!/usr/bin/env sh
+git diff --staged | claude -p "check this staged diff against the codedna" || true
+HOOK
+chmod +x .git/hooks/pre-commit
+```
+
+## What it captures
+
+- **Naming**: casing, verb dialect (`get` vs `fetch` vs `load`), abbreviations, boolean prefixes
+- **Comments and docs**: density, why-vs-what, register, doc-comment norms
+- **Prose by channel**: errors, validation, logs, test descriptions, CLI or UI text, repository docs
+- **Structure and control flow**: function size, extraction threshold, early returns, async style
+- **Error handling**: defensiveness, custom types, message tone
+- **Idioms**: reused helpers and domain vocabulary
+- **AI tells**: where this author is the opposite of the AI default
 
 ## Contributing
 
-Issues and pull requests are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) for how to test changes to the skill, and [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) for the ground rules.
+See [CONTRIBUTING.md](CONTRIBUTING.md). Ground rules: [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md).
 
 ## License
 

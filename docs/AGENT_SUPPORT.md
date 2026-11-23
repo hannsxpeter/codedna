@@ -7,7 +7,13 @@ codedna has two integration layers:
 
 ## Skill installs
 
-`./install.sh <target>` installs the same canonical skill bundle from `skill/` into the selected supported skill directory.
+Fastest path:
+
+```sh
+npx @hxp-tools/codedna@latest
+```
+
+`./install.sh <target>` installs the same canonical skill bundle from `skill/` into the selected skill directory.
 
 | Target | Command | Default destination |
 | --- | --- | --- |
@@ -44,10 +50,8 @@ If a repo already uses one of these files, codedna updates only the block betwee
 
 ## Release package install
 
-Release tarballs contain the skill bundle, installer, docs, tests, and license:
-
 ```sh
-curl -L https://github.com/hannsxpeter/codedna/releases/download/v1.1.1/codedna-v1.1.1.tar.gz | tar xz
-cd codedna-1.1.1
+curl -L https://github.com/hannsxpeter/codedna/releases/download/v1.2.0/codedna-v1.2.0.tar.gz | tar xz
+cd codedna-1.2.0
 ./install.sh codex
 ```
